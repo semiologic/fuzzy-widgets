@@ -5,7 +5,7 @@ Plugin URI: http://www.semiologic.com/software/widgets/fuzzy-widgets/
 Description: WordPress widgets that let you list fuzzy numbers of posts, pages, links, or comments.
 Author: Denis de Bernardy
 Version: 2.2
-Author URI: http://www.semiologic.com
+Author URI: http://www.getsemiologic.com
 Update Service: http://version.semiologic.com/wordpress
 Update Tag: fuzzy_widgets
 Update Package: http://www.semiologic.com/media/software/widgets/fuzzy-widgets/fuzzy-widgets.zip
