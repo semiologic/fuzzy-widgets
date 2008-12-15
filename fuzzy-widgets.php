@@ -6,7 +6,7 @@ Description: WordPress widgets that let you list fuzzy numbers of posts, pages, 
 Author: Denis de Bernardy
 Version: 2.2
 Author URI: http://www.getsemiologic.com
-Update Service: http://version.semiologic.com/wordpress
+Update Service: http://version.semiologic.com/plugins
 Update Tag: fuzzy_widgets
 Update Package: http://www.semiologic.com/media/software/widgets/fuzzy-widgets/fuzzy-widgets.zip
 */
