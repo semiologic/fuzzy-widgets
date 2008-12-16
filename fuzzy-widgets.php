@@ -4,7 +4,7 @@ Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/widgets/fuzzy-widgets/
 Description: WordPress widgets that let you list fuzzy numbers of posts, pages, links, or comments.
 Author: Denis de Bernardy
-Version: 2.2
+Version: 2.2.1 alpha
 Author URI: http://www.getsemiologic.com
 Update Service: http://version.semiologic.com/plugins
 Update Tag: fuzzy_widgets
@@ -370,7 +370,7 @@ class fuzzy_widgets
 		{
 			if ( isset($page_filters[$options['filter']]) )
 			{
-				$parent_sql = $page_filters[$options['filter']];
+				$parents_sql = $page_filters[$options['filter']];
 			}
 			else
 			{
@@ -387,13 +387,7 @@ class fuzzy_widgets
 						FROM	$wpdb->posts as posts
 						WHERE	posts.post_status = 'publish'
 						AND		posts.post_type = 'page'
-						AND		posts.ID IN ( $parents_sql )
-						UNION
-						SELECT	posts.ID
-						FROM	$wpdb->posts as posts
-						WHERE	posts.post_status = 'publish'
-						AND		posts.post_type = 'page'
-						AND		posts.post_parent IN ( $parents_sql )
+						AND		( posts.ID IN ( $parents_sql ) OR posts.post_parent IN ( $parents_sql ) )
 						");
 					
 					sort($parents);
@@ -402,7 +396,9 @@ class fuzzy_widgets
 				$page_filters[$options['filter']] = $parents_sql;
 			}
 		}
-
+		
+		#dump($parents_sql);
+		
 		$items_sql = "
 			SELECT	posts.*,
 					COALESCE(post_label.meta_value, post_title) as post_label,
@@ -429,7 +425,9 @@ class fuzzy_widgets
 			AND		posts.ID NOT IN ( $exclude_sql )
 			"
 			;
-
+		
+		#dump($items_sql);
+		
 		$items = fuzzy_widgets::get_items($items_sql, $options);
 
 		update_post_cache($items);
