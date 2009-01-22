@@ -26,8 +26,6 @@ class fuzzy_widgets_admin
 
 		add_action('add_link', array('fuzzy_widgets_admin', 'link_added'));
 
-		add_filter('sem_api_key_protected', array('fuzzy_widgets_admin', 'sem_api_key_protected'));
-		
 		if ( version_compare(mysql_get_server_info(), '4.1', '<') )
 		{
 			add_action('admin_notices', array('fuzzy_widgets_admin', 'mysql_warning'));
@@ -46,18 +44,6 @@ class fuzzy_widgets_admin
 			. '<p><b style="color: firebrick;">Fuzzy Widgets Error</b><br /><b>Your MySQL version is lower than 4.1.</b> It\'s time to <a href="http://www.semiologic.com/resources/wp-basics/wordpress-server-requirements/">change hosts</a> if yours doesn\'t want to upgrade.</p>'
 			. '</div>';
 	} # mysql_warning()
-	
-		
-	#
-	# sem_api_key_protected()
-	#
-	
-	function sem_api_key_protected($array)
-	{
-		$array[] = 'http://www.semiologic.com/media/software/widgets/fuzzy-widgets/fuzzy-widgets.zip';
-		
-		return $array;
-	} # sem_api_key_protected()
 
 
 	#
