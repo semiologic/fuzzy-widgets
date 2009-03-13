@@ -716,7 +716,7 @@ class fuzzy_widgets
 	{
 		$o = fuzzy_widgets::get_options();
 		$k = time();
-		do $k++; while ( isset($o[$k]) );
+		while ( isset($o[$k]) ) $k++;
 		$o[$k] = fuzzy_widgets::default_options();
 		
 		update_option('fuzzy_widgets', $o);
