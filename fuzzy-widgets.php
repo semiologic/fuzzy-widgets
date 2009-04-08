@@ -284,7 +284,7 @@ class fuzzy_widgets
 			$items[$key]->item_label = '<a href="'
 				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
 				. '">'
-				. $items[$key]->post_label
+				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
 				. '</a>'
 				. ( $options['desc'] && $items[$key]->post_desc
 					? wpautop($items[$key]->post_desc)
@@ -339,7 +339,7 @@ class fuzzy_widgets
 			$items[$key]->item_label = '<a href="'
 				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
 				. '">'
-				. $items[$key]->post_label
+				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
 				. '</a>'
 				. ( $options['desc'] && $items[$key]->post_desc
 					? wpautop($items[$key]->post_desc)
@@ -437,7 +437,7 @@ class fuzzy_widgets
 			$items[$key]->item_label = '<a href="'
 				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
 				. '">'
-				. $items[$key]->post_label
+				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
 				. '</a>'
 				. ( $options['desc'] && $items[$key]->post_desc
 					? wpautop($items[$key]->post_desc)
@@ -564,7 +564,7 @@ class fuzzy_widgets
 				. '<a href="'
 				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)) . '#comment-' . $items[$key]->comment_ID)
 				. '">'
-				. $items[$key]->post_label
+				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
 				. '</a>';
 		}
 
@@ -615,7 +615,7 @@ class fuzzy_widgets
 			$items[$key]->item_label = '<a href="'
 				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
 				. '">'
-				. $items[$key]->post_label
+				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
 				. '</a>'
 				. ( $options['desc'] && $items[$key]->post_desc
 					? wpautop($items[$key]->post_desc)
