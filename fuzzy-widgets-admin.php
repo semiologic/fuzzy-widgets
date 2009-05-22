@@ -274,7 +274,7 @@ class fuzzy_widgets_admin
 			. '<div style="width: 330px; float: right;">'
 			. '<input style="width: 320px;"'
 			. ' id="fuzzy-widget-title-' . $number . '" name="fuzzy-widget[' . $number . '][title]"'
-			. ' type="text" value="' . attribute_escape($title) . '"'
+			. ' type="text" value="' . esc_attr($title) . '"'
 			. ' />'
 			. '</div>'
 			. '<div style="clear: both;"></div>'
@@ -320,7 +320,7 @@ class fuzzy_widgets_admin
 					: ''
 					)
 				. '>'
-				. __('Posts', 'fuzzy-widgets') . ' / ' . attribute_escape($option->label)
+				. __('Posts', 'fuzzy-widgets') . ' / ' . esc_attr($option->label)
 				. '</option>';
 		}
 
@@ -346,7 +346,7 @@ class fuzzy_widgets_admin
 					: ''
 					)
 				. '>'
-				. __('Pages', 'fuzzy-widgets') . ' / ' . attribute_escape($option->label)
+				. __('Pages', 'fuzzy-widgets') . ' / ' . esc_attr($option->label)
 				. '</option>';
 		}
 
@@ -372,7 +372,7 @@ class fuzzy_widgets_admin
 					: ''
 					)
 				. '>'
-				. __('Links', 'fuzzy-widgets') . ' / ' . attribute_escape($option->label)
+				. __('Links', 'fuzzy-widgets') . ' / ' . esc_attr($option->label)
 				. '</option>';
 		}
 
