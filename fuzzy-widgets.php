@@ -1046,7 +1046,7 @@ class fuzzy_widget extends WP_Widget {
 
 		$wpdb->query("
 			UPDATE	$wpdb->links
-			SET		link_added = now()
+			SET		link_added = NOW()
 			WHERE	link_added = '0000-00-00 00:00:00'
 			");
 	} # link_added()
