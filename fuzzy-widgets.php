@@ -2,8 +2,8 @@
 /*
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
-Description: WordPress widgets that let you list fuzzy numbers of posts, pages, links, or comments.
-Version: 2.3 alpha
+Description: WordPress widgets that let you list recent posts, pages, links, or comments.
+Version: 3.0 RC
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets-info
@@ -14,15 +14,1074 @@ Domain Path: /lang
 Terms of use
 ------------
 
-This software is copyright Mesoconcepts (http://www.mesoconcepts.com), and is distributed under the terms of the Mesoconcepts license. In a nutshell, you may freely use it for any purpose, but may not redistribute it without written permission.
+This software is copyright Mesoconcepts and is distributed under the terms of the Mesoconcepts license. In a nutshell, you may freely use it for any purpose, but may not redistribute it without written permission.
 
 http://www.mesoconcepts.com/license/
 **/
 
 
-load_plugin_textdomain('fuzzy-widgets','wp-content/plugins/fuzzy-widgets');
+load_plugin_textdomain('fuzzy-widgets', null, dirname(__FILE__) . '/lang');
 
-class fuzzy_widgets
+if ( !defined('widget_utils_textdomain') )
+	define('widget_utils_textdomain', 'fuzzy-widgets');
+
+if ( !defined('sem_widget_cache_debug') )
+	define('sem_widget_cache_debug', false);
+
+
+/**
+ * fuzzy_widget
+ *
+ * @package Fuzzy Widgets
+ **/
+
+add_action('widgets_init', array('fuzzy_widget', 'widgets_init'));
+
+foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
+	add_action('load-' . $hook, array('fuzzy_widget', 'editor_init'));
+
+foreach ( array(
+		'save_post',
+		'delete_post',
+		'switch_theme',
+		'update_option_active_plugins',
+		'update_option_show_on_front',
+		'update_option_page_on_front',
+		'update_option_page_for_posts',
+		'update_option_sidebars_widgets',
+		'update_option_sem5_options',
+		'update_option_sem6_options',
+		'generate_rewrite_rules',
+		
+		'add_link',
+		'edit_link',
+		'delete_link',
+		'edit_comment',
+		'comment_post',
+		'wp_set_comment_status',
+		) as $hook)
+	add_action($hook, array('fuzzy_widget', 'flush_cache'));
+
+register_activation_hook(__FILE__, array('fuzzy_widget', 'activate'));
+register_deactivation_hook(__FILE__, array('fuzzy_widget', 'flush_cache'));
+
+add_action('save_post', array('fuzzy_widget', 'save_post'));
+add_action('add_link', array('fuzzy_widget', 'link_added'));
+
+class fuzzy_widget extends WP_Widget {
+	/**
+	 * editor_init()
+	 *
+	 * @return void
+	 **/
+
+	function editor_init() {
+		if ( !class_exists('widget_utils') )
+			include dirname(__FILE__) . '/widget-utils/widget-utils.php';
+		
+		widget_utils::post_meta_boxes();
+		widget_utils::page_meta_boxes();
+		add_action('post_widget_config_affected', array('fuzzy_widget', 'widget_config_affected'));
+		add_action('page_widget_config_affected', array('fuzzy_widget', 'widget_config_affected'));
+	} # editor_init()
+	
+	
+	/**
+	 * widget_config_affected()
+	 *
+	 * @return void
+	 **/
+
+	function widget_config_affected() {
+		echo '<li>'
+			. __('Recent Widgets', 'fuzzy-widgets')
+			. '</li>' . "\n";
+	} # widget_config_affected()
+	
+	
+	/**
+	 * widgets_init()
+	 *
+	 * @return void
+	 **/
+
+	function widgets_init() {
+		register_widget('fuzzy_widget');
+	} # widgets_init()
+	
+	
+	/**
+	 * fuzzy_widget()
+	 *
+	 * @return void
+	 **/
+
+	function fuzzy_widget() {
+		$widget_ops = array(
+			'classname' => 'fuzzy_widget',
+			'description' => __("Recent Posts, Pages, Links or Comments.", 'fuzzy-widgets'),
+			);
+		$control_ops = array(
+			'width' => 330,
+			);
+		
+		$this->WP_Widget('fuzzy_widget', __('Fuzzy Widget', 'fuzzy-widgets'), $widget_ops, $control_ops);
+	} # fuzzy_widget()
+	
+	
+	/**
+	 * widget()
+	 *
+	 * @param array $args widget args
+	 * @param array $instance widget options
+	 * @return void
+	 **/
+
+	function widget($args, $instance) {
+		extract($args, EXTR_SKIP);
+		extract($instance, EXTR_SKIP);
+		
+		if ( is_admin() || !in_array($type, array('pages', 'posts', 'links', 'comments', 'old_posts', 'updates')) )
+			return;
+		
+		$cache_id = "$widget_id";
+		$o = get_transient($cache_id);
+		
+		if ( !sem_widget_cache_debug && $o ) {
+			echo $o;
+			return;
+		}
+		
+		switch ( $type ) {
+		case 'pages':
+			$items = fuzzy_widget::get_pages($instance);
+			break;
+		case 'posts':
+			$items = fuzzy_widget::get_posts($instance);
+			break;
+		case 'links':
+			$items = fuzzy_widget::get_links($instance);
+			break;
+		case 'updates':
+			$items = fuzzy_widget::get_updates($instance);
+			break;
+		case 'old_posts':
+			$items = fuzzy_widget::get_old_posts($instance);
+			break;
+		case 'comments':
+			$items = fuzzy_widget::get_comments($instance);
+			break;
+		}
+		
+		ob_start();
+		
+		echo $before_widget;
+		
+		if ( $title )
+			echo $before_title . $title . $after_title;
+		
+		$cur_date = false;
+		$prev_date = false;
+		$descr = false;
+		foreach ( $items as $item ) {
+			switch ( $type ) {
+			case 'posts':
+			case 'pages':
+			case 'old_posts':
+			case 'updates':
+				$label = get_post_meta($item->ID, '_widgets_label', true);
+				if ( $label === '' )
+					$label = $item->post_title;
+				if ( $label === '' )
+					$label = __('Untitled', 'fuzzy-widgets');
+				
+				$link = apply_filters('the_permalink', get_permalink($item->ID));
+				
+				$label = '<a href="' . esc_url($link) . '"'
+						. ' title="' . esc_attr($label) . '"'
+						. '>'
+					. $label
+					. '</a>';
+				
+				if ( $desc ) {
+					$descr = trim(get_post_meta($item->ID, '_widgets_desc', true));
+				}
+				
+				if ( $date ) {
+					if ( $type == 'updates' )
+						$cur_date = mysql2date(get_option('date_format'), $item->post_modified);
+					else
+						$cur_date = mysql2date(get_option('date_format'), $item->post_date);
+				}
+				break;
+			case 'links':
+				$label = $item->link_name;
+				if ( $label === '' )
+					$label = __('Untitled', 'fuzzy-widgets');
+				
+				$label = '<a href="' . esc_url($item->link_url) . '"'
+						. ' title="' . esc_attr($label) . '"'
+						. '>'
+					. $label
+					. '</a>';
+				
+				if ( $desc ) {
+					$descr = trim($item->link_description);
+				}
+				
+				if ( $date ) {
+					$cur_date = mysql2date(get_option('date_format'), $link->link_added);
+					if ( !$cur_date ) {
+						if ( $prev_date )
+							$cur_date = $prev_date;
+						else
+							$cur_date = mysql2date(get_option('date_format'), date('H:m:d'));
+						
+						add_action('shutdown', array('fuzzy_widget', 'activate'));
+					}
+				}
+				break;
+			case 'comments':
+				$post_label = get_post_meta($item->ID, '_widgets_label', true);
+				if ( $post_label === '' )
+					$post_label = $item->post_title;
+				if ( $post_label === '' )
+					$post_label = __('Untitled', 'fuzzy-widgets');
+				
+				$post_link = apply_filters('the_permalink', get_permalink($item->ID));
+				
+				$author_label = strip_tags($item->comment_author);
+				
+				$author_link = $post_link . '#comment-' . $item->comment_ID;
+				
+				$post_label = '<a href="' . esc_url($post_link) . '"'
+						. ' title="' . esc_attr($post_label) . '"'
+						. '>'
+					. $post_label
+					. '</a>';
+				
+				$author_label = '<a href="' . esc_url($author_link) . '"'
+						. ' title="' . esc_attr($author_label) . '"'
+						. '>'
+					. $author_label
+					. '</a>';
+				
+				$label = sprintf(__('%1$s on %2$s', 'fuzzy-widgets'), $author_label, $post_label);
+				
+				if ( $date ) {
+					$cur_date = mysql2date(get_option('date_format'), $item->comment_date);
+				}
+				break;
+			}
+			
+			if ( $date && $prev_date && $cur_date != $prev_date ) {
+				echo '</ul>' . "\n";
+			}
+			
+			if ( $date && $cur_date != $prev_date ) {
+				echo '<h3 class="post_list_date">' . $cur_date . '</h3>' . "\n";
+			}
+			
+			if ( !$date && !$prev_date ) {
+				echo '<ul>' . "\n";
+				$prev_date = true;
+			} elseif ( $date && $cur_date != $prev_date ) {
+				echo '<ul>' . "\n";
+				$prev_date = $cur_date;
+			}
+			
+			echo '<li>'
+				. $label;
+				
+			if ( $descr )
+				echo "\n\n" . wpautop($descr);
+			
+			echo '</li>' . "\n";
+		}
+		
+		echo '</ul>' . "\n";
+		
+		echo $after_widget;
+		
+		$o = ob_get_clean();
+		
+		set_transient($cache_id, $o);
+		
+		echo $o;
+	} # widget()
+	
+	
+	/**
+	 * get_pages()
+	 *
+	 * @param array $instance
+	 * @return array $posts
+	 **/
+
+	function get_pages($instance) {
+		global $wpdb;
+		extract($instance, EXTR_SKIP);
+		$amount = min(max((int) $amount, 1), 10);
+		
+		$items_sql = "FROM	$wpdb->posts as post";
+		
+		if ( $filter ) {
+			$filter = intval($filter);
+			
+			if ( !get_transient('cached_section_ids') )
+				fuzzy_widget::cache_section_ids();
+			
+			$items_sql .= "
+				JOIN	$wpdb->postmeta as meta_filter
+				ON		meta_filter.post_id = post.ID
+				AND		meta_filter.meta_key = '_section_id'
+				AND		meta_filter.meta_value = '$filter'
+				";
+		}
+		
+		$items_sql .= "
+				LEFT JOIN $wpdb->postmeta as widgets_exclude
+				ON		widgets_exclude.post_id = post.ID
+				AND		widgets_exclude.meta_key = '_widgets_exclude'";
+		
+		$items_sql .= "
+				WHERE	post.post_status = 'publish'
+				AND		post.post_type = 'page'
+				AND		widgets_exclude.post_id IS NULL";
+		
+		if ( $fuzziness == 'items' ) {
+			$items_sql = "
+				SELECT	post.*
+				$items_sql
+				ORDER BY post.post_date DESC
+				LIMIT $amount
+				";
+		} else {
+			$items_sql = "
+				SELECT	post.*
+				$items_sql
+				AND		post.post_date >= (
+					SELECT MIN( post_day )
+					FROM (
+						SELECT	CAST(post.post_date AS DATE) as post_day
+						$items_sql
+						GROUP BY post_day
+						ORDER BY post.post_date DESC
+						LIMIT $amount
+						) as post_days
+					)
+				ORDER BY post.post_date DESC
+				";
+		}
+		
+		$posts = $wpdb->get_results($items_sql);
+		update_post_cache($posts);
+		
+		$post_ids = array();
+		foreach ( $posts as $post )
+			$post_ids[] = $post->ID;
+		update_postmeta_cache($post_ids);
+		
+		return $posts;
+	} # get_pages()
+	
+	
+	/**
+	 * get_posts()
+	 *
+	 * @param array $instance
+	 * @return array $posts
+	 **/
+
+	function get_posts($instance) {
+		global $wpdb;
+		extract($instance, EXTR_SKIP);
+		$amount = min(max((int) $amount, 1), 10);
+		
+		$items_sql = "FROM	$wpdb->posts as post";
+		
+		if ( $filter ) {
+			$filter = intval($filter);
+			
+			$items_sql .= "
+				JOIN	$wpdb->term_relationships as filter_tr
+				ON		filter_tr.object_id = post.ID
+				JOIN	$wpdb->term_taxonomy as filter_tt
+				ON		filter_tt.term_taxonomy_id = filter_tr.term_taxonomy_id
+				AND		filter_tt.term_id = $filter
+				AND		filter_tt.taxonomy = 'category'";
+		}
+		
+		$items_sql .= "
+				LEFT JOIN $wpdb->postmeta as widgets_exclude
+				ON		widgets_exclude.post_id = post.ID
+				AND		widgets_exclude.meta_key = '_widgets_exclude'";
+		
+		$items_sql .= "
+				WHERE	post.post_status = 'publish'
+				AND		post.post_type = 'post'
+				AND		widgets_exclude.post_id IS NULL";
+		
+		if ( $fuzziness == 'items' ) {
+			$items_sql = "
+				SELECT	post.*
+				$items_sql
+				ORDER BY post.post_date DESC
+				LIMIT $amount
+				";
+		} else {
+			$items_sql = "
+				SELECT	post.*
+				$items_sql
+				AND		post.post_date >= (
+					SELECT MIN( post_day )
+					FROM (
+						SELECT	CAST(post.post_date AS DATE) as post_day
+						$items_sql
+						GROUP BY post_day
+						ORDER BY post.post_date DESC
+						LIMIT $amount
+						) as post_days
+					)
+				ORDER BY post.post_date DESC
+				";
+		}
+		
+		$posts = $wpdb->get_results($items_sql);
+		update_post_cache($posts);
+		
+		$post_ids = array();
+		foreach ( $posts as $post )
+			$post_ids[] = $post->ID;
+		update_postmeta_cache($post_ids);
+		
+		return $posts;
+	} # get_posts()
+	
+	
+	/**
+	 * get_links()
+	 *
+	 * @param array $instance
+	 * @return array $links
+	 **/
+
+	function get_links($instance) {
+		global $wpdb;
+		extract($instance, EXTR_SKIP);
+		$amount = min(max((int) $amount, 1), 10);
+		
+		$items_sql = "FROM	$wpdb->links as link";
+		
+		if ( $filter ) {
+			$filter = intval($filter);
+			
+			$items_sql .= "
+				JOIN	$wpdb->term_relationships as filter_tr
+				ON		filter_tr.object_id = link.link_id
+				JOIN	$wpdb->term_taxonomy as filter_tt
+				ON		filter_tt.term_taxonomy_id = filter_tr.term_taxonomy_id
+				AND		filter_tt.term_id = $filter
+				AND		filter_tt.taxonomy = 'link_category'";
+		}
+		
+		$items_sql .= "
+				WHERE	link.link_visible = 'Y'";
+		
+		if ( $fuzziness == 'items' ) {
+			$items_sql = "
+				SELECT	link.*
+				$items_sql
+				ORDER BY link.link_added DESC
+				LIMIT $amount
+				";
+		} else {
+			$items_sql = "
+				SELECT	link.*
+				$items_sql
+				AND		link.link_added >= (
+					SELECT MIN( link_day )
+					FROM (
+						SELECT	CAST(link.link_added AS DATE) as link_day
+						$items_sql
+						GROUP BY link_day
+						ORDER BY link.link_added DESC
+						LIMIT $amount
+						) as link_days
+					)
+				ORDER BY link.link_added DESC
+				";
+		}
+		
+		$links = $wpdb->get_results($items_sql);
+		
+		return $links;
+	} # get_links()
+	
+	
+	/**
+	 * get_updates()
+	 *
+	 * @param array $instance
+	 * @return array $posts
+	 **/
+
+	function get_updates($instance) {
+		global $wpdb;
+		extract($instance, EXTR_SKIP);
+		$amount = min(max((int) $amount, 1), 10);
+		
+		$items_sql = "FROM	$wpdb->posts as post";
+		
+		$items_sql .= "
+				LEFT JOIN $wpdb->postmeta as widgets_exclude
+				ON		widgets_exclude.post_id = post.ID
+				AND		widgets_exclude.meta_key = '_widgets_exclude'";
+		
+		$items_sql .= "
+				WHERE	post.post_status = 'publish'
+				AND		post.post_type IN ( 'post', 'page' )
+				AND		post.post_modified > DATE_ADD(post.post_date, INTERVAL 2 DAY)
+				AND		widgets_exclude.post_id IS NULL";
+		
+		
+		if ( $fuzziness == 'items' ) {
+			$items_sql = "
+				SELECT	post.*
+				$items_sql
+				ORDER BY post.post_modified DESC
+				LIMIT $amount
+				";
+		} else {
+			$items_sql = "
+				SELECT	post.*
+				$items_sql
+				AND		post.post_date >= (
+					SELECT MIN( post_day )
+					FROM (
+						SELECT	CAST(post.post_modified AS DATE) as post_day
+						$items_sql
+						GROUP BY post_day
+						ORDER BY post.post_modified DESC
+						LIMIT $amount
+						) as post_days
+					)
+				ORDER BY post.post_modified DESC
+				";
+			
+		}
+		
+		$posts = $wpdb->get_results($items_sql);
+		update_post_cache($posts);
+		
+		$post_ids = array();
+		foreach ( $posts as $post )
+			$post_ids[] = $post->ID;
+		update_postmeta_cache($post_ids);
+		
+		return $posts;
+	} # get_updates()
+	
+	
+	/**
+	 * get_old_posts()
+	 *
+	 * @param array $instance
+	 * @return array $posts
+	 **/
+
+	function get_old_posts($instance) {
+		global $wpdb;
+		extract($instance, EXTR_SKIP);
+		$amount = min(max((int) $amount, 1), 10);
+		
+		$then = date('Y-m-d', strtotime("-1 year +1 day"));
+		
+		$items_sql = "FROM	$wpdb->posts as post";
+		
+		$items_sql .= "
+				LEFT JOIN $wpdb->postmeta as widgets_exclude
+				ON		widgets_exclude.post_id = post.ID
+				AND		widgets_exclude.meta_key = '_widgets_exclude'";
+		
+		$items_sql .= "
+				WHERE	post.post_status = 'publish'
+				AND		post.post_type IN ( 'post', 'page' )
+				AND		post.post_date <= '$then'
+				AND		widgets_exclude.post_id IS NULL";
+		
+		
+		if ( $fuzziness == 'items' ) {
+			$items_sql = "
+				SELECT	post.*
+				$items_sql
+				ORDER BY post.post_date DESC
+				LIMIT $amount
+				";
+		} else {
+			$items_sql = "
+				SELECT	post.*
+				$items_sql
+				AND		post.post_date >= (
+					SELECT MIN( post_day )
+					FROM (
+						SELECT	CAST(post.post_date AS DATE) as post_day
+						$items_sql
+						GROUP BY post_day
+						ORDER BY post.post_date DESC
+						LIMIT $amount, 1
+						) as post_days
+					)
+				ORDER BY post.post_date DESC
+				";
+		}
+		
+		$posts = $wpdb->get_results($items_sql);
+		update_post_cache($posts);
+		
+		$post_ids = array();
+		foreach ( $posts as $post )
+			$post_ids[] = $post->ID;
+		update_postmeta_cache($post_ids);
+		
+		return $posts;
+	} # get_old_posts()
+	
+	
+	/**
+	 * get_comments()
+	 *
+	 * @param array $instance
+	 * @return array $posts
+	 **/
+
+	function get_comments($instance) {
+		global $wpdb;
+		extract($instance, EXTR_SKIP);
+		$amount = min(max((int) $amount, 1), 10);
+		
+		$items_sql = "FROM	$wpdb->posts as post
+				JOIN	$wpdb->comments as comment
+				ON		comment.comment_post_ID = post.ID";
+		
+		$items_sql .= "
+				LEFT JOIN $wpdb->postmeta as widgets_exclude
+				ON		widgets_exclude.post_id = post.ID
+				AND		widgets_exclude.meta_key = '_widgets_exclude'";
+		
+		$items_sql .= "
+				WHERE	post.post_status = 'publish'
+				AND		post.post_type IN ( 'post', 'page' )
+				AND		post.post_password = ''
+				AND		comment.comment_approved = '1'
+				AND		widgets_exclude.post_id IS NULL";
+		
+		if ( $fuzziness == 'items' ) {
+			$items_sql = "
+				SELECT	post.*,
+						comment.*
+				$items_sql
+				ORDER BY comment.comment_date DESC
+				LIMIT $amount
+				";
+		} else {
+			$items_sql = "
+				SELECT	post.*,
+						comment.*
+				$items_sql
+				AND		comment.comment_date >= (
+					SELECT	MIN(comment_day)
+					FROM (
+						SELECT	CAST(comment.comment_date AS DATE) as comment_day
+						$items_sql
+						GROUP BY comment_day
+						ORDER BY comment.comment_date
+						LIMIT $amount
+						) as comment_days
+					)
+				ORDER BY comment.comment_date DESC
+				";
+		}
+		
+		$posts = $wpdb->get_results($items_sql);
+		update_post_cache($posts);
+		
+		$post_ids = array();
+		foreach ( $posts as $post )
+			$post_ids[] = $post->ID;
+		update_postmeta_cache($post_ids);
+		
+		return $posts;
+	} # get_comments()
+	
+	
+	/**
+	 * update()
+	 *
+	 * @param array $new_instance new widget options
+	 * @param array $old_instance old widget options
+	 * @return array $instance
+	 **/
+
+	function update($new_instance, $old_instance) {
+		$instance = fuzzy_widget::defaults();
+		
+		$instance['title'] = strip_tags($new_instance['title']);
+		$instance['amount'] = min(max((int) $new_instance['amount'], 1), 10);
+		$instance['desc'] = isset($new_instance['desc']);
+		$instance['date'] = isset($new_instance['date']);
+		
+		$type_filter = explode('-', $new_instance['type_filter']);
+		$type = array_shift($type_filter);
+		$filter = array_pop($type_filter);
+		$filter = intval($filter);
+		
+		$instance['type'] = in_array($type, array('posts', 'pages', 'links', 'comments', 'old_posts', 'updates'))
+			? $type
+			: 'posts';
+		if ( !in_array($instance['type'], array('comments', 'updates')) )
+			$instance['filter'] = $filter ? $filter : false;
+		else
+			$instance['filter'] = false;
+		
+		if ( version_compare(mysql_get_server_info(), '4.1', '<') ) {
+			$instance['fuzziness'] = 'items';
+		} else {
+			$instance['fuzziness'] = in_array($new_instance['fuzziness'], array('days', 'items'))
+				? $new_instance['fuzziness']
+				: 'days';
+		}
+		
+		$instance['amount'] = min($instance['amount'], 10);
+		
+		return $instance;
+	} # update()
+	
+	
+	/**
+	 * form()
+	 *
+	 * @param array $instance widget options
+	 * @return void
+	 **/
+
+	function form($instance) {
+		$instance = wp_parse_args($instance, fuzzy_widget::defaults());
+		static $pages;
+		static $categories;
+		static $link_categories;
+		
+		if ( !isset($pages) ) {
+			global $wpdb;
+			$pages = $wpdb->get_results("
+				SELECT	posts.*,
+						COALESCE(post_label.meta_value, post_title) as post_label
+				FROM	$wpdb->posts as posts
+				LEFT JOIN $wpdb->postmeta as post_label
+				ON		post_label.post_id = posts.ID
+				AND		post_label.meta_key = '_widgets_label'
+				WHERE	posts.post_type = 'page'
+				AND		posts.post_status = 'publish'
+				AND		posts.post_parent = 0
+				ORDER BY posts.menu_order, posts.post_title
+				");
+			update_post_cache($pages);
+		}
+		
+		if ( !isset($categories) ) {
+			$categories = get_terms('category', array('parent' => 0));
+		}
+		
+		if ( !isset($link_categories) ) {
+			$link_categories = get_terms('link_category', array('parent' => 0));
+		}
+		
+		static $allow_fuzzy;
+		
+		if ( !isset($allow_fuzzy) )
+			$allow_fuzzy = version_compare(mysql_get_server_info(), '4.1', '>=');
+		
+		extract($instance, EXTR_SKIP);
+		
+		echo '<p>'
+			. '<label>'
+			. __('Title:', 'fuzzy-widgets') . '<br />' . "\n"
+			. '<input type="text" size="20" name="' . $this->get_field_name('title') . '" class="widefat"'
+				. ' value="' . esc_attr($title) . '"'
+				. ' />'
+			. '</label>'
+			. '</p>' . "\n";
+		
+		echo '<p>'
+			. '<label>'
+			. __('Display:', 'fuzzy-widgets') . '<br />' . "\n"
+			. '<select name="' . $this->get_field_name('type_filter') . '" class="widefat">' . "\n";
+		
+		echo '<optgroup label="' . __('Posts', 'fuzzy-widgets') . '">' . "\n"
+			. '<option value="posts"' . selected($type == 'posts' && !$filter, true, false) . '>'
+			. __('Recent Posts / All Categories', 'fuzzy-widgets')
+			. '</option>' . "\n";
+		
+		foreach ( $categories as $category ) {
+			echo '<option value="posts-' . intval($category->term_id) . '"'
+					. selected($type == 'posts' && $filter == $category->term_id, true, false)
+					. '>'
+				. sprintf(__('Recent Posts / %s', 'fuzzy-widgets'), strip_tags($category->name))
+				. '</option>' . "\n";
+		}
+		
+		echo '</optgroup>' . "\n";
+		
+		echo '<optgroup label="' . __('Pages', 'fuzzy-widgets') . '">' . "\n"
+			. '<option value="pages"' . selected($type == 'pages' && !$filter, true, false) . '>'
+			. __('Recent Pages / All Sections', 'fuzzy-widgets')
+			. '</option>' . "\n";
+		
+		foreach ( $pages as $page ) {
+			echo '<option value="pages-' . intval($page->ID) . '"'
+					. selected($type == 'pages' && $filter == $page->ID, true, false)
+					. '>'
+				. sprintf(__('Recent Pages / %s', 'fuzzy-widgets'), strip_tags($page->post_label))
+				. '</option>' . "\n";
+		}
+		
+		echo '</optgroup>' . "\n";
+		
+		echo '<optgroup label="' . __('Links', 'fuzzy-widgets') . '">' . "\n"
+			. '<option value="links"' . selected($type == 'links' && !$filter, true, false) . '>'
+			. __('Recent Links / All Categories', 'fuzzy-widgets')
+			. '</option>' . "\n";
+		
+		foreach ( $link_categories as $link_category ) {
+			echo '<option value="links-' . intval($link_category->term_id) . '"'
+					. selected($type == 'links' && $filter == $link_category->term_id, true, false)
+					. '>'
+				. sprintf(__('Recent Links / %s', 'fuzzy-widgets'), strip_tags($link_category->name))
+				. '</option>' . "\n";
+		}
+		
+		echo '</optgroup>' . "\n";
+		
+		echo '<optgroup label="' . __('Miscellaneous', 'fuzzy-widgets') . '">' . "\n"
+			. '<option value="comments"' . selected($type == 'comments', true, false) . '>'
+			. __('Recent Comments', 'fuzzy-widgets')
+			. '</option>' . "\n"
+			. '<option value="old_posts"' . selected($type == 'comments', true, false) . '>'
+			. __('Around This Date In the Past', 'fuzzy-widgets')
+			. '</option>' . "\n"
+			. '<option value="updates"' . selected($type == 'updates', true, false) . '>'
+			. __('Recent Updates', 'fuzzy-widgets')
+			. '</option>' . "\n"
+			. '</optgroup>' . "\n";
+		
+		echo '</select>' . "\n"
+			. '</label>'
+			. '</p>' . "\n";
+		
+		if ( $allow_fuzzy ) {
+			echo '<p>'
+				. '<label>'
+				. sprintf(__('%1$s Recent %2$s', 'fuzzy-widgets'),
+					'<input type="text" size="3" name="' . $this->get_field_name('amount') . '"'
+						. ' value="' . intval($amount) . '"'
+						. ' />',
+					'<select name="' . $this->get_field_name('fuzziness') . '">' . "\n"
+					. '<option value="days"'
+						. checked($fuzziness, 'days', false)
+						. '>' . __('Days', 'fuzzy-widgets') . '</option>' . "\n"
+					. '<option value="items"'
+						. checked($fuzziness, 'items', false)
+						. '>' . __('Items', 'fuzzy-widgets') . '</option>' . "\n"
+					. '</select>'
+					)
+				. '</label>'
+				. '</p>' . "\n";
+		} else {
+			echo '<p>'
+				. '<label>'
+				. sprintf(__('%s Recent Items', 'fuzzy-widgets'),
+					'<input type="text" size="3" name="' . $this->get_field_name('amount') . '"'
+						. ' value="' . intval($amount) . '"'
+						. ' />'
+					)
+				. '</label>'
+				. '</p>' . "\n";
+		}
+		
+		echo '<p>'
+			. '<label>'
+			. '<input type="checkbox" name="' . $this->get_field_name('date') . '"'
+				. checked($desc, true, false)
+				. ' />'
+			. '&nbsp;'
+			. __('Show Dates', 'fuzzy-widgets')
+			. '</label>'
+			. '</p>' . "\n";
+		
+		echo '<p>'
+			. '<label>'
+			. '<input type="checkbox" name="' . $this->get_field_name('desc') . '"'
+				. checked($desc, true, false)
+				. ' />'
+			. '&nbsp;'
+			. __('Show Descriptions (except for comments)', 'fuzzy-widgets')
+			. '</label>'
+			. '</p>' . "\n";
+	} # form()
+	
+	
+	/**
+	 * defaults()
+	 *
+	 * @return array $instance default options
+	 **/
+
+	function defaults() {
+		static $allow_fuzzy;
+		
+		if ( !isset($allow_fuzzy) )
+			$allow_fuzzy = version_compare(mysql_get_server_info(), '4.1', '>=');
+		
+		return array(
+			'title' => __('Recent Posts', 'fuzzy-widgets'),
+			'type' => 'posts',
+			'filter' => false,
+			'amount' =>  $allow_fuzzy ? 3 : 5,
+			'fuzziness' => $allow_fuzzy ? 'days' : 'items',
+			'date' => false,
+			'desc' => false,
+			);
+	} # defaults()
+	
+	
+	/**
+	 * save_post()
+	 *
+	 * @param int $post_id
+	 * @return void
+	 **/
+
+	function save_post($post_id) {
+		$post = get_post($post_id);
+		
+		if ( $post->post_type != 'page' )
+			return;
+		
+		delete_transient('cached_section_ids');
+	} # save_post()
+	
+	
+	/**
+	 * cache_section_ids()
+	 *
+	 * @return void
+	 **/
+
+	function cache_section_ids() {
+		global $wpdb;
+		
+		$pages = $wpdb->get_results("
+			SELECT	*
+			FROM	$wpdb->posts
+			WHERE	post_type = 'page'
+			");
+		
+		update_post_cache($pages);
+		
+		$to_cache = array();
+		foreach ( $pages as $page )
+			$to_cache[] = $page->ID;
+		
+		update_postmeta_cache($to_cache);
+		
+		foreach ( $pages as $page ) {
+			$parent = $page;
+			while ( $parent->post_parent )
+				$parent = get_post($parent->post_parent);
+			
+			if ( "$parent->ID" !== get_post_meta($page->ID, '_section_id', true) )
+				update_post_meta($page->ID, '_section_id', "$parent->ID");
+		}
+		
+		set_transient('cached_section_ids', 1);
+	} # cache_section_ids()
+	
+	
+	/**
+	 * activate()
+	 *
+	 * @return void
+	 **/
+
+	function activate() {
+		if ( !get_option('sem_links_db_changed') ) {
+			global $wpdb;
+
+			$wpdb->query("
+				ALTER TABLE `$wpdb->links`
+				ADD `link_added` DATETIME NOT NULL AFTER `link_name`
+				");
+
+			$wpdb->query("
+				ALTER TABLE `$wpdb->links`
+				ADD INDEX ( `link_added` )
+				");
+
+			update_option('sem_links_db_changed', 1);
+		}
+
+		fuzzy_widget::link_added();
+		fuzzy_widget::flush_cache();
+	} # activate()
+	
+	
+	/**
+	 * link_added()
+	 *
+	 * @return void
+	 **/
+
+	function link_added() {
+		global $wpdb;
+
+		$wpdb->query("
+			UPDATE	$wpdb->links
+			SET		link_added = now()
+			WHERE	link_added = '0000-00-00 00:00:00'
+			");
+	} # link_added()
+	
+	
+	/**
+	 * flush_cache()
+	 *
+	 * @param mixed $in
+	 * @return mixed $in
+	 **/
+	
+	function flush_cache($in = null) {
+		$cache_ids = array();
+		
+		$widgets = get_option("widget_fuzzy_widget");
+		
+		if ( !$widgets )
+			return $in;
+		unset($widgets['_multiwidget']);
+		
+		foreach ( array_keys($widgets) as $widget_id )
+			$cache_ids[] = "fuzzy_widget-$widget_id";
+		
+		foreach ( $cache_ids as $cache_id )
+			delete_transient("_$cache_id");
+		
+		return $in;
+	} # flush_cache()
+} # fuzzy_widget
+
+
+
+
+class old_fuzzy_widgets
 {
 	#
 	# init()
@@ -30,8 +1089,6 @@ class fuzzy_widgets
 
 	function init()
 	{
-		add_action('widgets_init', array('fuzzy_widgets', 'widgetize'));
-
 		foreach ( array(
 				'save_post',
 				'delete_post',
@@ -57,701 +1114,5 @@ class fuzzy_widgets
 		register_activation_hook(__FILE__, array('fuzzy_widgets', 'clear_cache'));
 		register_deactivation_hook(__FILE__, array('fuzzy_widgets', 'clear_cache'));
 	} # init()
-
-
-	#
-	# widgetize()
-	#
-
-	function widgetize()
-	{
-		$options = fuzzy_widgets::get_options();
-		
-		$widget_options = array('classname' => 'fuzzy_widget', 'description' => __( "A fuzzy number of recent posts, pages, links or comments") );
-		$control_options = array('width' => 500, 'id_base' => 'fuzzy-widget');
-		
-		$id = false;
-
-		# registered widgets
-		foreach ( array_keys($options) as $o )
-		{
-			if ( !is_numeric($o) ) continue;
-			$id = "fuzzy-widget-$o";
-
-			wp_register_sidebar_widget($id, __('Fuzzy Widget'), array('fuzzy_widgets', 'display_widget'), $widget_options, array( 'number' => $o ));
-			wp_register_widget_control($id, __('Fuzzy Widget'), array('fuzzy_widgets_admin', 'widget_control'), $control_options, array( 'number' => $o ) );
-		}
-		
-		# default widget if none were registered
-		if ( !$id )
-		{
-			$id = "fuzzy-widget-1";
-			wp_register_sidebar_widget($id, __('Fuzzy Widget'), array('fuzzy_widgets', 'display_widget'), $widget_options, array( 'number' => -1 ));
-			wp_register_widget_control($id, __('Fuzzy Widget'), array('fuzzy_widgets_admin', 'widget_control'), $control_options, array( 'number' => -1 ) );
-		}
-		
-		# kill recent posts and recent comments widgets
-		global $wp_registered_widgets;
-		global $wp_registered_widget_controls;
-
-		foreach ( array('recent-posts', 'recent-comments') as $widget_id )
-		{
-			unset($wp_registered_widgets[$widget_id]);
-			unset($wp_registered_widget_controls[$widget_id]);
-		}
-	} # widgetize()
-
-
-	#
-	# display_widget()
-	#
-
-	function display_widget($args, $widget_args = 1)
-	{
-		if ( is_numeric($widget_args) )
-			$widget_args = array( 'number' => $widget_args );
-		$widget_args = wp_parse_args( $widget_args, array( 'number' => -1 ) );
-		extract( $widget_args, EXTR_SKIP );
-		
-		$number = intval($number);
-
-		# front end: serve cache if available
-		if ( !is_admin() )
-		{
-			$cache = get_option('fuzzy_widgets_cache');
-
-			if ( isset($cache[$number]) )
-			{
-				echo $cache[$number];
-				return;
-			}
-		}
-
-		# get options
-		$options = fuzzy_widgets::get_options();
-		$options = $options[$number];
-		
-		# admin area: serve a formatted title
-		if ( is_admin() )
-		{
-			echo $args['before_widget']
-				. $args['before_title'] . $options['title'] . $args['after_title']
-				. $args['after_widget'];
-
-			return;
-		}
-		
-		# initialize
-		$o = '';
-
-		# fetch items
-		switch ( $options['type'] )
-		{
-		case 'posts':
-			$items = fuzzy_widgets::get_posts($options);
-			break;
-
-		case 'old_posts':
-			$items = fuzzy_widgets::get_old_posts($options);
-			break;
-
-		case 'pages':
-			$items = fuzzy_widgets::get_pages($options);
-			break;
-
-		case 'links':
-			$items = fuzzy_widgets::get_links($options);
-			break;
-
-		case 'comments':
-			$items = fuzzy_widgets::get_comments($options);
-			break;
-
-		case 'updates':
-			$items = fuzzy_widgets::get_updates($options);
-			break;
-
-		default:
-			$items = array();
-			break;
-		}
-
-		# fetch output
-		if ( $items )
-		{
-			$o .= $args['before_widget'] . "\n"
-				. ( $options['title']
-					? ( $args['before_title'] . $options['title'] . $args['after_title'] . "\n" )
-					: ''
-					);
-
-			if ( !$options['date'] )
-			{
-				$o .= '<ul>' . "\n";
-			}
-
-			foreach ( $items as $item )
-			{
-				if ( $options['date'] )
-				{
-					$cur_date = mysql2date(get_option('date_format'), $item->item_date);
-
-					if ( !isset($prev_date) )
-					{
-						$o .= '<h3>' . $cur_date . '</h3>' . "\n"
-							. '<ul>' . "\n";
-					}
-					elseif ( $cur_date != $prev_date )
-					{
-						$o .= '</ul>' . "\n"
-							. '<h3>' . $cur_date . '</h3>' . "\n"
-							. '<ul>' . "\n";
-					}
-
-					$prev_date = $cur_date;
-				}
-
-				$o .= '<li>'
-					. $item->item_label
-					. '</li>' . "\n";
-			}
-
-			$o .= '</ul>' . "\n";
-
-			$o .= $args['after_widget'] . "\n";
-		}
-
-		# cache
-		$cache[$number] = $o;
-
-		update_option('fuzzy_widgets_cache', $cache);
-
-		# display
-		echo $o;
-	} # display_widget()
-
-
-	#
-	# get_posts()
-	#
-
-	function get_posts($options)
-	{
-		global $wpdb;
-		
-		$exclude_sql = "
-			SELECT	post_id
-			FROM	$wpdb->postmeta
-			WHERE	meta_key = '_widgets_exclude'
-			";
-		
-		$items_sql = "
-			SELECT	posts.*,
-					COALESCE(post_label.meta_value, post_title) as post_label,
-					COALESCE(post_desc.meta_value, '') as post_desc,
-					posts.post_date as item_date
-			FROM	$wpdb->posts as posts
-			"
-			. ( $options['filter']
-				? ( "
-			INNER JOIN $wpdb->term_relationships as term_relationships
-			ON		term_relationships.object_id = posts.ID
-			INNER JOIN $wpdb->term_taxonomy as term_taxonomy
-			ON		term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id
-			AND		term_taxonomy.taxonomy = 'category'
-			AND		term_taxonomy.term_id = " . intval($options['filter'])
-			)
-				: ''
-				)
-			. "
-			LEFT JOIN $wpdb->postmeta as post_label
-			ON		post_label.post_id = posts.ID
-			AND		post_label.meta_key = '_widgets_label'
-			LEFT JOIN $wpdb->postmeta as post_desc
-			ON		post_desc.post_id = posts.ID
-			AND		post_desc.meta_key = '_widgets_desc'
-			WHERE	posts.post_status = 'publish'
-			AND		posts.post_type = 'post'
-			AND		posts.post_password = ''
-			AND		posts.ID NOT IN ( $exclude_sql )
-			"
-			;
-
-		$items = fuzzy_widgets::get_items($items_sql, $options);
-
-		update_post_cache($items);
-
-		foreach ( array_keys($items) as $key )
-		{
-			$items[$key]->item_label = '<a href="'
-				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
-				. '">'
-				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
-				. '</a>'
-				. ( $options['desc'] && $items[$key]->post_desc
-					? wpautop($items[$key]->post_desc)
-					: ''
-					);
-		}
-
-		return $items;
-	} # get_posts()
-
-
-	#
-	# get_old_posts()
-	#
-
-	function get_old_posts($options)
-	{
-		global $wpdb;
-
-		$exclude_sql = "
-			SELECT	post_id
-			FROM	$wpdb->postmeta
-			WHERE	meta_key = '_widgets_exclude'
-			";
-		
-		$items_sql = "
-			SELECT	posts.*,
-					COALESCE(post_label.meta_value, post_title) as post_label,
-					COALESCE(post_desc.meta_value, '') as post_desc,
-					posts.post_date as item_date
-			FROM	$wpdb->posts as posts
-			LEFT JOIN $wpdb->postmeta as post_label
-			ON		post_label.post_id = posts.ID
-			AND		post_label.meta_key = '_widgets_label'
-			LEFT JOIN $wpdb->postmeta as post_desc
-			ON		post_desc.post_id = posts.ID
-			AND		post_desc.meta_key = '_widgets_desc'
-			WHERE	posts.post_status = 'publish'
-			AND		posts.post_type = 'post'
-			AND		posts.post_password = ''
-			AND		posts.post_date <= now() - interval 1 year
-			AND		posts.ID NOT IN ( $exclude_sql )
-			"
-			;
-
-		$items = fuzzy_widgets::get_items($items_sql, $options);
-
-		update_post_cache($items);
-
-		foreach ( array_keys($items) as $key )
-		{
-			$items[$key]->item_label = '<a href="'
-				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
-				. '">'
-				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
-				. '</a>'
-				. ( $options['desc'] && $items[$key]->post_desc
-					? wpautop($items[$key]->post_desc)
-					: ''
-					);
-		}
-
-		return $items;
-	} # get_old_posts()
-
-
-	#
-	# get_pages()
-	#
-
-	function get_pages($options)
-	{
-		global $wpdb;
-		global $page_filters;
-
-		$exclude_sql = "
-			SELECT	post_id
-			FROM	$wpdb->postmeta
-			WHERE	meta_key = '_widgets_exclude'
-			";
-		
-		if ( $options['filter'] )
-		{
-			if ( isset($page_filters[$options['filter']]) )
-			{
-				$parents_sql = $page_filters[$options['filter']];
-			}
-			else
-			{
-				$parents = array($options['filter']);
-
-				do
-				{
-					$old_parents = $parents;
-
-					$parents_sql = implode(', ', $parents);
-
-					$parents = (array) $wpdb->get_col("
-						SELECT	posts.ID
-						FROM	$wpdb->posts as posts
-						WHERE	posts.post_status = 'publish'
-						AND		posts.post_type = 'page'
-						AND		( posts.ID IN ( $parents_sql ) OR posts.post_parent IN ( $parents_sql ) )
-						");
-					
-					sort($parents);
-				} while ( $parents != $old_parents );
-
-				$page_filters[$options['filter']] = $parents_sql;
-			}
-		}
-		
-		#dump($parents_sql);
-		
-		$items_sql = "
-			SELECT	posts.*,
-					COALESCE(post_label.meta_value, post_title) as post_label,
-					COALESCE(post_desc.meta_value, '') as post_desc,
-					posts.post_date as item_date
-			FROM	$wpdb->posts as posts
-			LEFT JOIN $wpdb->postmeta as post_label
-			ON		post_label.post_id = posts.ID
-			AND		post_label.meta_key = '_widgets_label'
-			LEFT JOIN $wpdb->postmeta as post_desc
-			ON		post_desc.post_id = posts.ID
-			AND		post_desc.meta_key = '_widgets_desc'
-			WHERE	posts.post_status = 'publish'
-			AND		posts.post_type = 'page'
-			AND		posts.post_password = ''
-			"
-			. ( $options['filter']
-				? ( "
-			AND		posts.post_parent IN ( $parents_sql )
-			" )
-				: ''
-				)
-			. "
-			AND		posts.ID NOT IN ( $exclude_sql )
-			"
-			;
-		
-		#dump($items_sql);
-		
-		$items = fuzzy_widgets::get_items($items_sql, $options);
-
-		update_post_cache($items);
-
-		foreach ( array_keys($items) as $key )
-		{
-			$items[$key]->item_label = '<a href="'
-				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
-				. '">'
-				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
-				. '</a>'
-				. ( $options['desc'] && $items[$key]->post_desc
-					? wpautop($items[$key]->post_desc)
-					: ''
-					);
-		}
-
-		return $items;
-	} # get_pages()
-
-
-	#
-	# get_links()
-	#
-
-	function get_links($options)
-	{
-		global $wpdb;
-
-		$items_sql = "
-			SELECT	links.*,
-					links.link_added as item_date
-			FROM	$wpdb->links as links
-			"
-			. ( $options['filter']
-				? ( "
-			INNER JOIN $wpdb->term_relationships as term_relationships
-			ON		term_relationships.object_id = links.link_id
-			INNER JOIN $wpdb->term_taxonomy as term_taxonomy
-			ON		term_taxonomy.term_taxonomy_id = term_relationships.term_taxonomy_id
-			AND		term_taxonomy.taxonomy = 'link_category'
-			AND		term_taxonomy.term_id = " . intval($options['filter'])
-			)
-				: ''
-				)
-			. "
-			WHERE	links.link_visible = 'Y'
-			"
-			;
-
-		$items = fuzzy_widgets::get_items($items_sql, $options);
-
-		foreach ( array_keys($items) as $key )
-		{
-			$items[$key]->item_label = '<a href="'
-				. htmlspecialchars($items[$key]->link_url)
-				. '">'
-				. $items[$key]->link_name
-				. '</a>'
-				. ( $options['desc'] && $items[$key]->link_description
-					? wpautop($items[$key]->link_description)
-					: ''
-					);
-		}
-
-		return $items;
-	} # get_links()
-
-
-	#
-	# get_comments()
-	#
-
-	function get_comments($options)
-	{
-		global $wpdb;
-
-		$exclude_sql = "
-			SELECT	post_id
-			FROM	$wpdb->postmeta
-			WHERE	meta_key = '_widgets_exclude'
-			";
-		
-		$min_comment_date_sql = "
-				SELECT	comment_post_ID,
-						max(comment_date) as min_comment_date
-				FROM	$wpdb->comments
-				WHERE	comment_ID NOT IN (
-					SELECT	invalid_comments.comment_ID
-					FROM	$wpdb->comments as invalid_comments
-					INNER JOIN (
-						SELECT	comment_post_ID,
-								max(comment_date) as max_comment_date
-						FROM	$wpdb->comments
-						GROUP BY comment_post_ID
-						HAVING	count(comment_ID) > 1
-						) as latest_comments
-					ON		latest_comments.comment_post_ID = invalid_comments.comment_post_ID
-					WHERE	invalid_comments.comment_date = latest_comments.max_comment_date
-					)
-				GROUP BY comment_post_ID
-				";
-
-		$items_sql = "
-			SELECT	posts.*,
-					comments.*,
-					COALESCE(post_label.meta_value, post_title) as post_label,
-					comments.comment_date as item_date
-			FROM	$wpdb->posts as posts
-			INNER JOIN $wpdb->comments as comments
-			ON		comments.comment_post_ID = posts.ID
-			INNER JOIN ( $min_comment_date_sql ) as valid_comments
-			ON		valid_comments.comment_post_ID = comments.comment_post_ID
-			LEFT JOIN $wpdb->postmeta as post_label
-			ON		post_label.post_id = posts.ID
-			AND		post_label.meta_key = '_widgets_label'
-			WHERE	posts.post_status = 'publish'
-			AND		posts.post_type IN ('post', 'page')
-			AND		posts.post_password = ''
-			AND		comments.comment_approved = '1'
-			AND		comments.comment_date >= valid_comments.min_comment_date
-			AND		posts.ID NOT IN ( $exclude_sql )
-			"
-			;
-
-		$items = fuzzy_widgets::get_items($items_sql, $options);
-
-		update_post_cache($items);
-
-		foreach ( array_keys($items) as $key )
-		{
-			$items[$key]->item_label = $items[$key]->comment_author
-				. ' ' . __('on', 'fuzzy-widgets') . ' '
-				. '<a href="'
-				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)) . '#comment-' . $items[$key]->comment_ID)
-				. '">'
-				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
-				. '</a>';
-		}
-
-		return $items;
-	} # get_comments()
-
-
-	#
-	# get_updates()
-	#
-
-	function get_updates($options)
-	{
-		global $wpdb;
-
-		$exclude_sql = "
-			SELECT	post_id
-			FROM	$wpdb->postmeta
-			WHERE	meta_key = '_widgets_exclude'
-			";
-
-		$items_sql = "
-			SELECT	posts.*,
-					COALESCE(post_label.meta_value, post_title) as post_label,
-					COALESCE(post_desc.meta_value, '') as post_desc,
-					posts.post_modified as item_date
-			FROM	$wpdb->posts as posts
-			LEFT JOIN $wpdb->postmeta as post_label
-			ON		post_label.post_id = posts.ID
-			AND		post_label.meta_key = '_widgets_label'
-			LEFT JOIN $wpdb->postmeta as post_desc
-			ON		post_desc.post_id = posts.ID
-			AND		post_desc.meta_key = '_widgets_desc'
-			WHERE	posts.post_status = 'publish'
-			AND		posts.post_type IN ('post', 'page')
-			AND		posts.post_password = ''
-			AND		posts.post_modified > DATE_ADD(posts.post_date, INTERVAL 2 DAY)
-			AND		posts.ID NOT IN ( $exclude_sql )
-			"
-			;
-
-		$items = fuzzy_widgets::get_items($items_sql, $options);
-
-		update_post_cache($items);
-
-		foreach ( array_keys($items) as $key )
-		{
-			$items[$key]->item_label = '<a href="'
-				. htmlspecialchars(apply_filters('the_permalink', get_permalink($items[$key]->ID)))
-				. '">'
-				. ( $items[$key]->post_label ? $items[$key]->post_label : __('Untitled') )
-				. '</a>'
-				. ( $options['desc'] && $items[$key]->post_desc
-					? wpautop($items[$key]->post_desc)
-					: ''
-					);
-		}
-
-		return $items;
-	} # get_updates()
-
-
-	#
-	# get_items()
-	#
-
-	function get_items($items_sql, $options)
-	{
-		global $wpdb;
-
-		switch ( $options['fuzziness'] )
-		{
-		case 'days':
-			$min_item_date_sql = "
-				SELECT	MIN(min_item_date) as min_item_date
-				FROM (
-					SELECT	DISTINCT DATE_FORMAT( item_date, '%Y-%m-%d 00:00:00' ) as min_item_date
-					FROM	( $items_sql ) as items
-					ORDER BY min_item_date DESC
-					LIMIT " . intval($options['amount']) . "
-					) as min_item_dates
-				";
-
-			$items = (array) $wpdb->get_results("
-				SELECT	items.*
-				FROM	( $items_sql ) as items
-				WHERE	items.item_date >= ( $min_item_date_sql )
-				ORDER BY items.item_date DESC"
-				);
-			break;
-
-		case 'days_ago':
-			$items = (array) $wpdb->get_results("
-				SELECT	items.*
-				FROM	( $items_sql ) as items
-				WHERE	items.item_date >= now() - interval " . intval($options['amount']) . " day
-				ORDER BY items.item_date DESC"
-				);
-			break;
-
-		case 'items':
-			$items = (array) $wpdb->get_results("
-				SELECT	items.*
-				FROM	( $items_sql ) as items
-				ORDER BY items.item_date DESC
-				LIMIT " . intval($options['amount'])
-				);
-			break;
-
-		default:
-			$items = array();
-		}
-
-		return $items;
-	} # get_items()
-
-
-	#
-	# clear_cache()
-	#
-
-	function clear_cache($in = null)
-	{
-		update_option('fuzzy_widgets_cache', array());
-
-		return $in;
-	} # clear_cache()
-
-
-	#
-	# get_options()
-	#
-
-	function get_options()
-	{
-		if ( ( $o = get_option('fuzzy_widgets') ) === false )
-		{
-			$o = array();
-
-			update_option('fuzzy_widgets', $o);
-		}
-
-		return $o;
-	} # get_options()
-	
-	
-	#
-	# new_widget()
-	#
-	
-	function new_widget()
-	{
-		$o = fuzzy_widgets::get_options();
-		$k = time();
-		while ( isset($o[$k]) ) $k++;
-		$o[$k] = fuzzy_widgets::default_options();
-		
-		update_option('fuzzy_widgets', $o);
-		
-		return 'fuzzy-widget-' . $k;
-	} # new_widget()
-
-
-	#
-	# default_options()
-	#
-
-	function default_options()
-	{
-		return array(
-			'title' => __('Recent Posts'),
-			'type' => 'posts',
-			'amount' => 5,
-			'fuzziness' => 'days',
-			'date' => false,
-			'desc' => false,
-			);
-	} # default_options()
 } # fuzzy_widgets
-
-fuzzy_widgets::init();
-
-
-if ( is_admin() )
-{
-	include dirname(__FILE__) . '/fuzzy-widgets-admin.php';
-}
 ?>

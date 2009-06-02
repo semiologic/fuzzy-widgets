@@ -1,0 +1,169 @@
+# Fuzzy Widgets pot file.
+# Copyright (C) 2009 Mesoconcepts <http://www.mesoconcepts.com>
+# This file is distributed under the same license as the Fuzzy Widgets package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: 3.0\n"
+"Report-Msgid-Bugs-To: https://tickets.semiologic.com\n"
+"POT-Creation-Date: 2009-06-02 18:27+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: fuzzy-widgets.php:97
+msgid "Recent Widgets"
+msgstr ""
+
+#: fuzzy-widgets.php:122
+msgid "Recent Posts, Pages, Links or Comments."
+msgstr ""
+
+#: fuzzy-widgets.php:128
+msgid "Fuzzy Widget"
+msgstr ""
+
+#: fuzzy-widgets.php:196 fuzzy-widgets.php:220 fuzzy-widgets.php:249
+msgid "Untitled"
+msgstr ""
+
+#: fuzzy-widgets.php:269
+#, php-format
+msgid "%1$s on %2$s"
+msgstr ""
+
+#: fuzzy-widgets.php:808
+msgid "Title:"
+msgstr ""
+
+#: fuzzy-widgets.php:817
+msgid "Display:"
+msgstr ""
+
+#: fuzzy-widgets.php:820
+msgid "Posts"
+msgstr ""
+
+#: fuzzy-widgets.php:822
+msgid "Recent Posts / All Categories"
+msgstr ""
+
+#: fuzzy-widgets.php:829
+#, php-format
+msgid "Recent Posts / %s"
+msgstr ""
+
+#: fuzzy-widgets.php:835
+msgid "Pages"
+msgstr ""
+
+#: fuzzy-widgets.php:837
+msgid "Recent Pages / All Sections"
+msgstr ""
+
+#: fuzzy-widgets.php:844
+#, php-format
+msgid "Recent Pages / %s"
+msgstr ""
+
+#: fuzzy-widgets.php:850
+msgid "Links"
+msgstr ""
+
+#: fuzzy-widgets.php:852
+msgid "Recent Links / All Categories"
+msgstr ""
+
+#: fuzzy-widgets.php:859
+#, php-format
+msgid "Recent Links / %s"
+msgstr ""
+
+#: fuzzy-widgets.php:865
+msgid "Miscellaneous"
+msgstr ""
+
+#: fuzzy-widgets.php:867
+msgid "Recent Comments"
+msgstr ""
+
+#: fuzzy-widgets.php:870
+msgid "Around This Date In the Past"
+msgstr ""
+
+#: fuzzy-widgets.php:873
+msgid "Recent Updates"
+msgstr ""
+
+#: fuzzy-widgets.php:884
+#, php-format
+msgid "%1$s Recent %2$s"
+msgstr ""
+
+#: fuzzy-widgets.php:891
+msgid "Days"
+msgstr ""
+
+#: fuzzy-widgets.php:894
+msgid "Items"
+msgstr ""
+
+#: fuzzy-widgets.php:902
+#, php-format
+msgid "%s Recent Items"
+msgstr ""
+
+#: fuzzy-widgets.php:917
+msgid "Show Dates"
+msgstr ""
+
+#: fuzzy-widgets.php:927
+msgid "Show Descriptions (except for comments)"
+msgstr ""
+
+#: fuzzy-widgets.php:946
+msgid "Recent Posts"
+msgstr ""
+
+#: widget-utils/widget-utils.php:27
+msgid "This Post In Widgets"
+msgstr ""
+
+#: widget-utils/widget-utils.php:46
+msgid "This Page In Widgets"
+msgstr ""
+
+#: widget-utils/widget-utils.php:113
+msgid "The following fields let you configure options shared by:"
+msgstr ""
+
+#: widget-utils/widget-utils.php:121
+msgid ""
+"It will <b>NOT</b> affect anything else. In particular WordPress's built-in "
+"Pages widget."
+msgstr ""
+
+#: widget-utils/widget-utils.php:128
+msgid "Title"
+msgstr ""
+
+#: widget-utils/widget-utils.php:140
+msgid "Description"
+msgstr ""
+
+#: widget-utils/widget-utils.php:151
+msgid "Exclude"
+msgstr ""
+
+#: widget-utils/widget-utils.php:163
+msgid "Exclude this entry from automatically generated lists"
+msgstr ""
+
+#: widget-utils/widget-utils.php:182
+msgid "... except for silo stubs, silo maps and smart links."
+msgstr ""
