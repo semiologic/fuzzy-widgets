@@ -1077,42 +1077,4 @@ class fuzzy_widget extends WP_Widget {
 		return $in;
 	} # flush_cache()
 } # fuzzy_widget
-
-
-
-
-class old_fuzzy_widgets
-{
-	#
-	# init()
-	#
-
-	function init()
-	{
-		foreach ( array(
-				'save_post',
-				'delete_post',
-				'add_link',
-				'edit_link',
-				'delete_link',
-				'edit_comment',
-				'comment_post',
-				'wp_set_comment_status',
-				'switch_theme',
-				'update_option_show_on_front',
-				'update_option_page_on_front',
-				'update_option_page_for_posts',
-				'update_option_sidebars_widgets',
-				'update_option_sem5_options',
-				'update_option_sem6_options',
-				'generate_rewrite_rules',
-				) as $hook)
-		{
-			add_action($hook, array('fuzzy_widgets', 'clear_cache'));
-		}
-		
-		register_activation_hook(__FILE__, array('fuzzy_widgets', 'clear_cache'));
-		register_deactivation_hook(__FILE__, array('fuzzy_widgets', 'clear_cache'));
-	} # init()
-} # fuzzy_widgets
 ?>
