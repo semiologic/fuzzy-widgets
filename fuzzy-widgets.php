@@ -190,9 +190,9 @@ class fuzzy_widget extends WP_Widget {
 			case 'old_posts':
 			case 'updates':
 				$label = get_post_meta($item->ID, '_widgets_label', true);
-				if ( $label === '' )
+				if ( (string) $label === '' )
 					$label = $item->post_title;
-				if ( $label === '' )
+				if ( (string) $label === '' )
 					$label = __('Untitled', 'fuzzy-widgets');
 				
 				$link = apply_filters('the_permalink', get_permalink($item->ID));
@@ -216,7 +216,7 @@ class fuzzy_widget extends WP_Widget {
 				break;
 			case 'links':
 				$label = $item->link_name;
-				if ( $label === '' )
+				if ( (string) $label === '' )
 					$label = __('Untitled', 'fuzzy-widgets');
 				
 				$label = '<a href="' . esc_url($item->link_url) . '"'
@@ -243,9 +243,9 @@ class fuzzy_widget extends WP_Widget {
 				break;
 			case 'comments':
 				$post_label = get_post_meta($item->ID, '_widgets_label', true);
-				if ( $post_label === '' )
+				if ( (string) $post_label === '' )
 					$post_label = $item->post_title;
-				if ( $post_label === '' )
+				if ( (string) $post_label === '' )
 					$post_label = __('Untitled', 'fuzzy-widgets');
 				
 				$post_link = apply_filters('the_permalink', get_permalink($item->ID));
