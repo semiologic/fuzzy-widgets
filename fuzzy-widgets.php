@@ -724,6 +724,7 @@ class fuzzy_widget extends WP_Widget {
 	 **/
 
 	function update($new_instance, $old_instance) {
+		global $wpdb;
 		$instance = fuzzy_widget::defaults();
 		
 		$instance['title'] = strip_tags($new_instance['title']);
@@ -744,7 +745,7 @@ class fuzzy_widget extends WP_Widget {
 		else
 			$instance['filter'] = false;
 		
-		if ( version_compare(mysql_get_server_info(), '4.1', '<') ) {
+		if ( version_compare($wpdb->db_version(), '4.1', '<') ) {
 			$instance['fuzziness'] = 'items';
 		} else {
 			$instance['fuzziness'] = in_array($new_instance['fuzziness'], array('days', 'items'))
@@ -799,7 +800,7 @@ class fuzzy_widget extends WP_Widget {
 		static $allow_fuzzy;
 		
 		if ( !isset($allow_fuzzy) )
-			$allow_fuzzy = version_compare(mysql_get_server_info(), '4.1', '>=');
+			$allow_fuzzy = version_compare($wpdb->db_version(), '4.1', '>=');
 		
 		extract($instance, EXTR_SKIP);
 		
@@ -942,7 +943,7 @@ class fuzzy_widget extends WP_Widget {
 		static $allow_fuzzy;
 		
 		if ( !isset($allow_fuzzy) )
-			$allow_fuzzy = version_compare(mysql_get_server_info(), '4.1', '>=');
+			$allow_fuzzy = version_compare($wpdb->db_version(), '4.1', '>=');
 		
 		return array(
 			'title' => __('Recent Posts', 'fuzzy-widgets'),
