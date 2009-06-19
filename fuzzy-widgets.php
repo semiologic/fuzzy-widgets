@@ -724,7 +724,6 @@ class fuzzy_widget extends WP_Widget {
 	 **/
 
 	function update($new_instance, $old_instance) {
-		global $wpdb;
 		$instance = fuzzy_widget::defaults();
 		
 		$instance['title'] = strip_tags($new_instance['title']);
@@ -745,7 +744,7 @@ class fuzzy_widget extends WP_Widget {
 		else
 			$instance['filter'] = false;
 		
-		if ( version_compare($wpdb->db_version(), '4.1', '<') ) {
+		if ( !fuzzy_widget::allow_fuzzy() ) {
 			$instance['fuzziness'] = 'items';
 		} else {
 			$instance['fuzziness'] = in_array($new_instance['fuzziness'], array('days', 'items'))
@@ -767,7 +766,6 @@ class fuzzy_widget extends WP_Widget {
 	 **/
 
 	function form($instance) {
-		global $wpdb;
 		$instance = wp_parse_args($instance, fuzzy_widget::defaults());
 		static $pages;
 		static $categories;
@@ -797,11 +795,6 @@ class fuzzy_widget extends WP_Widget {
 		if ( !isset($link_categories) ) {
 			$link_categories = get_terms('link_category', array('parent' => 0));
 		}
-		
-		static $allow_fuzzy;
-		
-		if ( !isset($allow_fuzzy) )
-			$allow_fuzzy = version_compare($wpdb->db_version(), '4.1', '>=');
 		
 		extract($instance, EXTR_SKIP);
 		
@@ -882,7 +875,7 @@ class fuzzy_widget extends WP_Widget {
 			. '</label>'
 			. '</p>' . "\n";
 		
-		if ( $allow_fuzzy ) {
+		if ( fuzzy_widget::allow_fuzzy() ) {
 			echo '<p>'
 				. '<label>'
 				. sprintf(__('%1$s Recent %2$s', 'fuzzy-widgets'),
@@ -941,11 +934,7 @@ class fuzzy_widget extends WP_Widget {
 	 **/
 
 	function defaults() {
-		global $wpdb;
-		static $allow_fuzzy;
-		
-		if ( !isset($allow_fuzzy) )
-			$allow_fuzzy = version_compare($wpdb->db_version(), '4.1', '>=');
+		$allow_fuzzy = fuzzy_widget::allow_fuzzy();
 		
 		return array(
 			'title' => __('Recent Posts', 'fuzzy-widgets'),
@@ -1081,5 +1070,24 @@ class fuzzy_widget extends WP_Widget {
 		
 		return $in;
 	} # flush_cache()
+	
+	
+	/**
+	 * allow_fuzzy()
+	 *
+	 * @return bool $allow_fuzzy
+	 **/
+
+	function allow_fuzzy() {
+		static $allow_fuzzy;
+		
+		if ( isset($allow_fuzzy) )
+			return $allow_fuzzy;
+		
+		global $wpdb;
+		$allow_fuzzy = version_compare($wpdb->db_version(), '4.1', '>=');
+		
+		return $allow_fuzzy;
+	} # allow_fuzzy()
 } # fuzzy_widget
 ?>
