@@ -767,6 +767,7 @@ class fuzzy_widget extends WP_Widget {
 	 **/
 
 	function form($instance) {
+		global $wpdb;
 		$instance = wp_parse_args($instance, fuzzy_widget::defaults());
 		static $pages;
 		static $categories;
@@ -940,6 +941,7 @@ class fuzzy_widget extends WP_Widget {
 	 **/
 
 	function defaults() {
+		global $wpdb;
 		static $allow_fuzzy;
 		
 		if ( !isset($allow_fuzzy) )
