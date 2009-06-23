@@ -6,7 +6,7 @@ Description: WordPress widgets that let you list recent posts, pages, links, or 
 Version: 3.0 RC
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
-Text Domain: fuzzy-widgets-info
+Text Domain: fuzzy-widgets
 Domain Path: /lang
 */
 

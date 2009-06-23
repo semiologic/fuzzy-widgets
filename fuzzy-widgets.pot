@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 3.0\n"
 "Report-Msgid-Bugs-To: https://tickets.semiologic.com\n"
-"POT-Creation-Date: 2009-06-02 18:27+0200\n"
+"POT-Creation-Date: 2009-06-23 17:15+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -28,105 +28,105 @@ msgstr ""
 msgid "Fuzzy Widget"
 msgstr ""
 
-#: fuzzy-widgets.php:196 fuzzy-widgets.php:220 fuzzy-widgets.php:249
+#: fuzzy-widgets.php:204 fuzzy-widgets.php:228 fuzzy-widgets.php:257
 msgid "Untitled"
 msgstr ""
 
-#: fuzzy-widgets.php:269
+#: fuzzy-widgets.php:277
 #, php-format
 msgid "%1$s on %2$s"
 msgstr ""
 
-#: fuzzy-widgets.php:808
+#: fuzzy-widgets.php:811
 msgid "Title:"
 msgstr ""
 
-#: fuzzy-widgets.php:817
+#: fuzzy-widgets.php:822
 msgid "Display:"
 msgstr ""
 
-#: fuzzy-widgets.php:820
+#: fuzzy-widgets.php:825
 msgid "Posts"
 msgstr ""
 
-#: fuzzy-widgets.php:822
+#: fuzzy-widgets.php:827
 msgid "Recent Posts / All Categories"
 msgstr ""
 
-#: fuzzy-widgets.php:829
+#: fuzzy-widgets.php:834
 #, php-format
 msgid "Recent Posts / %s"
 msgstr ""
 
-#: fuzzy-widgets.php:835
+#: fuzzy-widgets.php:840
 msgid "Pages"
 msgstr ""
 
-#: fuzzy-widgets.php:837
+#: fuzzy-widgets.php:842
 msgid "Recent Pages / All Sections"
 msgstr ""
 
-#: fuzzy-widgets.php:844
+#: fuzzy-widgets.php:849
 #, php-format
 msgid "Recent Pages / %s"
 msgstr ""
 
-#: fuzzy-widgets.php:850
+#: fuzzy-widgets.php:855
 msgid "Links"
 msgstr ""
 
-#: fuzzy-widgets.php:852
+#: fuzzy-widgets.php:857
 msgid "Recent Links / All Categories"
 msgstr ""
 
-#: fuzzy-widgets.php:859
+#: fuzzy-widgets.php:864
 #, php-format
 msgid "Recent Links / %s"
 msgstr ""
 
-#: fuzzy-widgets.php:865
+#: fuzzy-widgets.php:870
 msgid "Miscellaneous"
 msgstr ""
 
-#: fuzzy-widgets.php:867
+#: fuzzy-widgets.php:872
 msgid "Recent Comments"
 msgstr ""
 
-#: fuzzy-widgets.php:870
+#: fuzzy-widgets.php:875
 msgid "Around This Date In the Past"
 msgstr ""
 
-#: fuzzy-widgets.php:873
+#: fuzzy-widgets.php:878
 msgid "Recent Updates"
 msgstr ""
 
-#: fuzzy-widgets.php:884
+#: fuzzy-widgets.php:889
 #, php-format
 msgid "%1$s Recent %2$s"
 msgstr ""
 
-#: fuzzy-widgets.php:891
+#: fuzzy-widgets.php:896
 msgid "Days"
 msgstr ""
 
-#: fuzzy-widgets.php:894
+#: fuzzy-widgets.php:899
 msgid "Items"
 msgstr ""
 
-#: fuzzy-widgets.php:902
+#: fuzzy-widgets.php:907
 #, php-format
 msgid "%s Recent Items"
 msgstr ""
 
-#: fuzzy-widgets.php:917
+#: fuzzy-widgets.php:922
 msgid "Show Dates"
 msgstr ""
 
-#: fuzzy-widgets.php:927
+#: fuzzy-widgets.php:932
 msgid "Show Descriptions (except for comments)"
 msgstr ""
 
-#: fuzzy-widgets.php:946
+#: fuzzy-widgets.php:948
 msgid "Recent Posts"
 msgstr ""
 
