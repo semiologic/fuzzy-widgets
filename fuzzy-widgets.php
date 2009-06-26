@@ -125,6 +125,18 @@ class fuzzy_widget extends WP_Widget {
 			'width' => 330,
 			);
 		
+		if ( get_option('widget_fuzzy_widget') === false ) {
+			foreach ( array(
+				'fuzzy_widgets' => 'upgrade',
+				) as $ops => $method ) {
+				if ( get_option($ops) !== false ) {
+					$this->alt_option_name = $ops;
+					add_filter('option_' . $ops, array('fuzzy_widget', $method));
+					break;
+				}
+			}
+		}
+		
 		$this->WP_Widget('fuzzy_widget', __('Fuzzy Widget', 'fuzzy-widgets'), $widget_ops, $control_ops);
 	} # fuzzy_widget()
 	
@@ -1097,5 +1109,46 @@ class fuzzy_widget extends WP_Widget {
 		
 		return $allow_fuzzy;
 	} # allow_fuzzy()
+	
+	
+	/**
+	 * upgrade()
+	 *
+	 * @param array $ops
+	 * @return array $ops
+	 **/
+
+	function upgrade($ops) {
+		$widget_contexts = class_exists('widget_contexts')
+			? get_option('widget_contexts')
+			: false;
+		
+		foreach ( $ops as $k => $o ) {
+			if ( isset($widget_contexts['fuzzy-widget-' . $k]) ) {
+				$ops[$k]['widget_contexts'] = $widget_contexts['fuzzy-widget-' . $k];
+				unset($widget_contexts['fuzzy-widget-' . $k]);
+			}
+		}
+		
+		$sidebars_widgets = get_option('sidebars_widgets');
+		$keys = array_keys($ops);
+		
+		foreach ( $sidebars_widgets as $sidebar => $widgets ) {
+			if ( !is_array($widgets) )
+				continue;
+			foreach ( $keys as $k ) {
+				$key = array_search("fuzzy-widget-$k", $widgets);
+				if ( $key !== false ) {
+					$sidebars_widgets[$sidebar][$key] = 'fuzzy_widget-' . $k;
+					unset($keys[array_search($k, $keys)]);
+				}
+			}
+		}
+		
+		update_option('widget_fuzzy_widget', $ops);
+		update_option('sidebars_widgets', $sidebars_widgets);
+		
+		return $ops;
+	} # upgrade()
 } # fuzzy_widget
 ?>
