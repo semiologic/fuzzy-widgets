@@ -1147,6 +1147,11 @@ class fuzzy_widget extends WP_Widget {
 		
 		update_option('widget_fuzzy_widget', $ops);
 		update_option('sidebars_widgets', $sidebars_widgets);
+		if ( $widget_contexts !== false )
+			update_option('widget_contexts', $widget_contexts);
+		
+		global $_wp_sidebars_widgets;
+		$_wp_sidebars_widgets = $sidebars_widgets;
 		
 		return $ops;
 	} # upgrade()
