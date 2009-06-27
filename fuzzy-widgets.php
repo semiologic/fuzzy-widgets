@@ -1136,7 +1136,6 @@ class fuzzy_widget extends WP_Widget {
 		foreach ( $ops as $k => $o ) {
 			if ( isset($widget_contexts['fuzzy-widget-' . $k]) ) {
 				$ops[$k]['widget_contexts'] = $widget_contexts['fuzzy-widget-' . $k];
-				unset($widget_contexts['fuzzy-widget-' . $k]);
 			}
 		}
 		
