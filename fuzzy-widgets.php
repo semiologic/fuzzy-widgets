@@ -70,6 +70,27 @@ add_action('add_link', array('fuzzy_widget', 'link_added'));
 
 class fuzzy_widget extends WP_Widget {
 	/**
+	 * init()
+	 *
+	 * @return void
+	 **/
+
+	function init() {
+		if ( get_option('widget_fuzzy_widget') === false ) {
+			foreach ( array(
+				'fuzzy_widgets' => 'upgrade',
+				) as $ops => $method ) {
+				if ( get_option($ops) !== false ) {
+					$this->alt_option_name = $ops;
+					add_filter('option_' . $ops, array(get_class($this), $method));
+					break;
+				}
+			}
+		}
+	} # init()
+	
+	
+	/**
 	 * editor_init()
 	 *
 	 * @return void
@@ -125,18 +146,7 @@ class fuzzy_widget extends WP_Widget {
 			'width' => 330,
 			);
 		
-		if ( get_option('widget_fuzzy_widget') === false ) {
-			foreach ( array(
-				'fuzzy_widgets' => 'upgrade',
-				) as $ops => $method ) {
-				if ( get_option($ops) !== false ) {
-					$this->alt_option_name = $ops;
-					add_filter('option_' . $ops, array('fuzzy_widget', $method));
-					break;
-				}
-			}
-		}
-		
+		$this->init();
 		$this->WP_Widget('fuzzy_widget', __('Fuzzy Widget', 'fuzzy-widgets'), $widget_ops, $control_ops);
 	} # fuzzy_widget()
 	
@@ -1130,7 +1140,7 @@ class fuzzy_widget extends WP_Widget {
 			}
 		}
 		
-		$sidebars_widgets = get_option('sidebars_widgets');
+		$sidebars_widgets = wp_get_sidebars_widgets(false);
 		$keys = array_keys($ops);
 		
 		foreach ( $sidebars_widgets as $sidebar => $widgets ) {
@@ -1145,13 +1155,9 @@ class fuzzy_widget extends WP_Widget {
 			}
 		}
 		
-		update_option('widget_fuzzy_widget', $ops);
-		update_option('sidebars_widgets', $sidebars_widgets);
-		if ( $widget_contexts !== false )
-			update_option('widget_contexts', $widget_contexts);
-		
+		wp_set_sidebars_widgets($sidebars_widgets);
 		global $_wp_sidebars_widgets;
-		$_wp_sidebars_widgets = $sidebars_widgets;
+		$_wp_sidebars_widgets = array();
 		
 		return $ops;
 	} # upgrade()
