@@ -115,7 +115,7 @@ class fuzzy_widget extends WP_Widget {
 
 	function widget_config_affected() {
 		echo '<li>'
-			. __('Recent Widgets', 'fuzzy-widgets')
+			. __('Fuzzy Widgets', 'fuzzy-widgets')
 			. '</li>' . "\n";
 	} # widget_config_affected()
 	
