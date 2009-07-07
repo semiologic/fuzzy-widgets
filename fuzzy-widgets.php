@@ -59,6 +59,9 @@ foreach ( array(
 		'edit_comment',
 		'comment_post',
 		'wp_set_comment_status',
+		
+		'flush_cache',
+		'update_option_db_version',
 		) as $hook)
 	add_action($hook, array('fuzzy_widget', 'flush_cache'));
 
@@ -208,7 +211,7 @@ class fuzzy_widget extends WP_Widget {
 		
 		ob_start();
 		
-		echo $before_widget;
+		echo str_replace('fuzzy_widget', 'fuzzy_widget fuzzy_' . $type, $before_widget);
 		
 		if ( $title )
 			echo $before_title . $title . $after_title;
