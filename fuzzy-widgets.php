@@ -181,9 +181,12 @@ class fuzzy_widget extends WP_Widget {
 		$cache_id = "$widget_id";
 		$o = get_transient($cache_id);
 		
-		if ( !sem_widget_cache_debug && $o ) {
-			echo $o;
-			return;
+		if ( !sem_widget_cache_debug && !is_preview() ) {
+			if ( $o !== false ) {
+				if ( $o )
+					echo $o;
+				return;
+			}
 		}
 		
 		switch ( $type ) {
@@ -205,6 +208,12 @@ class fuzzy_widget extends WP_Widget {
 		case 'comments':
 			$items = fuzzy_widget::get_comments($instance);
 			break;
+		}
+		
+		if ( !$items ) {
+			if ( !is_preview() )
+				set_transient($cache_id, '');
+			return;
 		}
 		
 		$title = apply_filters('widget_title', $title);
@@ -266,7 +275,7 @@ class fuzzy_widget extends WP_Widget {
 				}
 				
 				if ( $date ) {
-					$cur_date = mysql2date(get_option('date_format'), $link->link_added);
+					$cur_date = mysql2date(get_option('date_format'), $item->link_added);
 					if ( !$cur_date ) {
 						if ( $prev_date )
 							$cur_date = $prev_date;
@@ -341,7 +350,8 @@ class fuzzy_widget extends WP_Widget {
 		
 		$o = ob_get_clean();
 		
-		set_transient($cache_id, $o);
+		if ( !is_preview() )
+			set_transient($cache_id, $o);
 		
 		echo $o;
 	} # widget()
@@ -790,6 +800,8 @@ class fuzzy_widget extends WP_Widget {
 		
 		$instance['amount'] = min($instance['amount'], 10);
 		
+		fuzzy_widget::flush_cache();
+		
 		return $instance;
 	} # update()
 	
@@ -1102,7 +1114,7 @@ class fuzzy_widget extends WP_Widget {
 			$cache_ids[] = "fuzzy_widget-$widget_id";
 		
 		foreach ( $cache_ids as $cache_id )
-			delete_transient("_$cache_id");
+			delete_transient($cache_id);
 		
 		return $in;
 	} # flush_cache()
