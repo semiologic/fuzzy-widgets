@@ -61,7 +61,7 @@ foreach ( array(
 		'wp_set_comment_status',
 		
 		'flush_cache',
-		'update_option_db_version',
+		'after_db_upgrade_version',
 		) as $hook)
 	add_action($hook, array('fuzzy_widget', 'flush_cache'));
 
