@@ -3,7 +3,7 @@
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
 Description: WordPress widgets that let you list recent posts, pages, links, or comments.
-Version: 3.0 RC
+Version: 3.0 RC2
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets
@@ -20,7 +20,7 @@ http://www.mesoconcepts.com/license/
 **/
 
 
-load_plugin_textdomain('fuzzy-widgets', null, dirname(__FILE__) . '/lang');
+load_plugin_textdomain('fuzzy-widgets', false, dirname(plugin_basename(__FILE__)) . '/lang');
 
 if ( !defined('widget_utils_textdomain') )
 	define('widget_utils_textdomain', 'fuzzy-widgets');
@@ -61,7 +61,7 @@ foreach ( array(
 		'wp_set_comment_status',
 		
 		'flush_cache',
-		'after_db_upgrade_version',
+		'after_db_upgrade',
 		) as $hook)
 	add_action($hook, array('fuzzy_widget', 'flush_cache'));
 
@@ -143,7 +143,7 @@ class fuzzy_widget extends WP_Widget {
 	function fuzzy_widget() {
 		$widget_ops = array(
 			'classname' => 'fuzzy_widget',
-			'description' => __("Recent Posts, Pages, Links or Comments.", 'fuzzy-widgets'),
+			'description' => __('Recent Posts, Pages, Links or Comments.', 'fuzzy-widgets'),
 			);
 		$control_ops = array(
 			'width' => 330,
@@ -602,7 +602,7 @@ class fuzzy_widget extends WP_Widget {
 			$items_sql = "
 				SELECT	post.*
 				$items_sql
-				AND		post.post_date >= (
+				AND		post.post_modified >= (
 					SELECT MIN( post_day )
 					FROM (
 						SELECT	CAST(post.post_modified AS DATE) as post_day
@@ -614,7 +614,6 @@ class fuzzy_widget extends WP_Widget {
 					)
 				ORDER BY post.post_modified DESC
 				";
-			
 		}
 		
 		$posts = $wpdb->get_results($items_sql);
@@ -675,7 +674,7 @@ class fuzzy_widget extends WP_Widget {
 						$items_sql
 						GROUP BY post_day
 						ORDER BY post.post_date DESC
-						LIMIT $amount, 1
+						LIMIT $amount
 						) as post_days
 					)
 				ORDER BY post.post_date DESC
@@ -911,7 +910,7 @@ class fuzzy_widget extends WP_Widget {
 			. '<option value="comments"' . selected($type == 'comments', true, false) . '>'
 			. __('Recent Comments', 'fuzzy-widgets')
 			. '</option>' . "\n"
-			. '<option value="old_posts"' . selected($type == 'comments', true, false) . '>'
+			. '<option value="old_posts"' . selected($type == 'old_posts', true, false) . '>'
 			. __('Around This Date In the Past', 'fuzzy-widgets')
 			. '</option>' . "\n"
 			. '<option value="updates"' . selected($type == 'updates', true, false) . '>'
@@ -932,10 +931,10 @@ class fuzzy_widget extends WP_Widget {
 						. ' />',
 					'<select name="' . $this->get_field_name('fuzziness') . '">' . "\n"
 					. '<option value="days"'
-						. checked($fuzziness, 'days', false)
+						. selected($fuzziness, 'days', false)
 						. '>' . __('Days', 'fuzzy-widgets') . '</option>' . "\n"
 					. '<option value="items"'
-						. checked($fuzziness, 'items', false)
+						. selected($fuzziness, 'items', false)
 						. '>' . __('Items', 'fuzzy-widgets') . '</option>' . "\n"
 					. '</select>'
 					)
@@ -956,7 +955,7 @@ class fuzzy_widget extends WP_Widget {
 		echo '<p>'
 			. '<label>'
 			. '<input type="checkbox" name="' . $this->get_field_name('date') . '"'
-				. checked($desc, true, false)
+				. checked($date, true, false)
 				. ' />'
 			. '&nbsp;'
 			. __('Show Dates', 'fuzzy-widgets')
