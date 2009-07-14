@@ -71,6 +71,8 @@ register_deactivation_hook(__FILE__, array('fuzzy_widget', 'flush_cache'));
 add_action('save_post', array('fuzzy_widget', 'save_post'));
 add_action('add_link', array('fuzzy_widget', 'link_added'));
 
+wp_cache_add_non_persistent_groups(array('widget_queries'));
+
 class fuzzy_widget extends WP_Widget {
 	/**
 	 * init()
@@ -420,13 +422,19 @@ class fuzzy_widget extends WP_Widget {
 				";
 		}
 		
-		$posts = $wpdb->get_results($items_sql);
-		update_post_cache($posts);
+		$cache_id = md5($items_sql);
+		$posts = wp_cache_get($cache_id, 'widget_queries');
 		
-		$post_ids = array();
-		foreach ( $posts as $post )
-			$post_ids[] = $post->ID;
-		update_postmeta_cache($post_ids);
+		if ( $posts === false ) {
+			$posts = $wpdb->get_results($items_sql);
+			update_post_cache($posts);
+			wp_cache_add($cache_id, $posts, 'widget_queries');
+
+			$post_ids = array();
+			foreach ( $posts as $post )
+				$post_ids[] = $post->ID;
+			update_postmeta_cache($post_ids);
+		}
 		
 		return $posts;
 	} # get_pages()
@@ -493,13 +501,19 @@ class fuzzy_widget extends WP_Widget {
 				";
 		}
 		
-		$posts = $wpdb->get_results($items_sql);
-		update_post_cache($posts);
+		$cache_id = md5($items_sql);
+		$posts = wp_cache_get($cache_id, 'widget_queries');
 		
-		$post_ids = array();
-		foreach ( $posts as $post )
-			$post_ids[] = $post->ID;
-		update_postmeta_cache($post_ids);
+		if ( $posts === false ) {
+			$posts = $wpdb->get_results($items_sql);
+			update_post_cache($posts);
+			wp_cache_add($cache_id, $posts, 'widget_queries');
+
+			$post_ids = array();
+			foreach ( $posts as $post )
+				$post_ids[] = $post->ID;
+			update_postmeta_cache($post_ids);
+		}
 		
 		return $posts;
 	} # get_posts()
@@ -559,7 +573,13 @@ class fuzzy_widget extends WP_Widget {
 				";
 		}
 		
-		$links = $wpdb->get_results($items_sql);
+		$cache_id = md5($items_sql);
+		$links = wp_cache_get($cache_id, 'widget_queries');
+		
+		if ( $links === false ) {
+			$links = $wpdb->get_results($items_sql);
+			wp_cache_add($cache_id, $links, 'widget_queries');
+		}
 		
 		return $links;
 	} # get_links()
@@ -616,13 +636,19 @@ class fuzzy_widget extends WP_Widget {
 				";
 		}
 		
-		$posts = $wpdb->get_results($items_sql);
-		update_post_cache($posts);
+		$cache_id = md5($items_sql);
+		$posts = wp_cache_get($cache_id, 'widget_queries');
 		
-		$post_ids = array();
-		foreach ( $posts as $post )
-			$post_ids[] = $post->ID;
-		update_postmeta_cache($post_ids);
+		if ( $posts === false ) {
+			$posts = $wpdb->get_results($items_sql);
+			update_post_cache($posts);
+			wp_cache_add($cache_id, $posts, 'widget_queries');
+
+			$post_ids = array();
+			foreach ( $posts as $post )
+				$post_ids[] = $post->ID;
+			update_postmeta_cache($post_ids);
+		}
 		
 		return $posts;
 	} # get_updates()
@@ -681,13 +707,19 @@ class fuzzy_widget extends WP_Widget {
 				";
 		}
 		
-		$posts = $wpdb->get_results($items_sql);
-		update_post_cache($posts);
+		$cache_id = md5($items_sql);
+		$posts = wp_cache_get($cache_id, 'widget_queries');
 		
-		$post_ids = array();
-		foreach ( $posts as $post )
-			$post_ids[] = $post->ID;
-		update_postmeta_cache($post_ids);
+		if ( $posts === false ) {
+			$posts = $wpdb->get_results($items_sql);
+			update_post_cache($posts);
+			wp_cache_add($cache_id, $posts, 'widget_queries');
+
+			$post_ids = array();
+			foreach ( $posts as $post )
+				$post_ids[] = $post->ID;
+			update_postmeta_cache($post_ids);
+		}
 		
 		return $posts;
 	} # get_old_posts()
@@ -748,13 +780,19 @@ class fuzzy_widget extends WP_Widget {
 				";
 		}
 		
-		$posts = $wpdb->get_results($items_sql);
-		update_post_cache($posts);
+		$cache_id = md5($items_sql);
+		$posts = wp_cache_get($cache_id, 'widget_queries');
 		
-		$post_ids = array();
-		foreach ( $posts as $post )
-			$post_ids[] = $post->ID;
-		update_postmeta_cache($post_ids);
+		if ( $posts === false ) {
+			$posts = $wpdb->get_results($items_sql);
+			update_post_cache($posts);
+			wp_cache_add($cache_id, $posts, 'widget_queries');
+
+			$post_ids = array();
+			foreach ( $posts as $post )
+				$post_ids[] = $post->ID;
+			update_postmeta_cache($post_ids);
+		}
 		
 		return $posts;
 	} # get_comments()
@@ -1107,7 +1145,9 @@ class fuzzy_widget extends WP_Widget {
 		
 		if ( !$widgets )
 			return $in;
+		
 		unset($widgets['_multiwidget']);
+		unset($widgets['number']);
 		
 		foreach ( array_keys($widgets) as $widget_id )
 			$cache_ids[] = "fuzzy_widget-$widget_id";
