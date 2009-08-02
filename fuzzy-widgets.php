@@ -35,44 +35,6 @@ if ( !defined('sem_widget_cache_debug') )
  * @package Fuzzy Widgets
  **/
 
-add_action('widgets_init', array('fuzzy_widget', 'widgets_init'));
-
-foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
-	add_action('load-' . $hook, array('fuzzy_widget', 'editor_init'));
-
-foreach ( array(
-		'save_post',
-		'delete_post',
-		'switch_theme',
-		'update_option_active_plugins',
-		'update_option_show_on_front',
-		'update_option_page_on_front',
-		'update_option_page_for_posts',
-		'update_option_sidebars_widgets',
-		'update_option_sem5_options',
-		'update_option_sem6_options',
-		'generate_rewrite_rules',
-		
-		'add_link',
-		'edit_link',
-		'delete_link',
-		'edit_comment',
-		'comment_post',
-		'wp_set_comment_status',
-		
-		'flush_cache',
-		'after_db_upgrade',
-		) as $hook)
-	add_action($hook, array('fuzzy_widget', 'flush_cache'));
-
-register_activation_hook(__FILE__, array('fuzzy_widget', 'activate'));
-register_deactivation_hook(__FILE__, array('fuzzy_widget', 'flush_cache'));
-
-add_action('save_post', array('fuzzy_widget', 'save_post'));
-add_action('add_link', array('fuzzy_widget', 'link_added'));
-
-wp_cache_add_non_persistent_groups(array('widget_queries'));
-
 class fuzzy_widget extends WP_Widget {
 	/**
 	 * init()
@@ -1225,4 +1187,42 @@ class fuzzy_widget extends WP_Widget {
 		return $ops;
 	} # upgrade()
 } # fuzzy_widget
+
+add_action('widgets_init', array('fuzzy_widget', 'widgets_init'));
+
+foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
+	add_action('load-' . $hook, array('fuzzy_widget', 'editor_init'));
+
+foreach ( array(
+		'save_post',
+		'delete_post',
+		'switch_theme',
+		'update_option_active_plugins',
+		'update_option_show_on_front',
+		'update_option_page_on_front',
+		'update_option_page_for_posts',
+		'update_option_sidebars_widgets',
+		'update_option_sem5_options',
+		'update_option_sem6_options',
+		'generate_rewrite_rules',
+		
+		'add_link',
+		'edit_link',
+		'delete_link',
+		'edit_comment',
+		'comment_post',
+		'wp_set_comment_status',
+		
+		'flush_cache',
+		'after_db_upgrade',
+		) as $hook)
+	add_action($hook, array('fuzzy_widget', 'flush_cache'));
+
+register_activation_hook(__FILE__, array('fuzzy_widget', 'activate'));
+register_deactivation_hook(__FILE__, array('fuzzy_widget', 'flush_cache'));
+
+add_action('save_post', array('fuzzy_widget', 'save_post'));
+add_action('add_link', array('fuzzy_widget', 'link_added'));
+
+wp_cache_add_non_persistent_groups(array('widget_queries'));
 ?>
