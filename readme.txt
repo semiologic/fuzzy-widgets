@@ -20,7 +20,7 @@ To use the plugin, browse Appearance / Widgets, insert a Fuzzy Widget where you 
 - Recent comments will only display comments from public posts and pages -- fully ignoring password protected and private content.
 - Recent posts from the past will display posts that were published around a year ago.
 
-= What's the fuzziness is about =
+= What's the fuzziness about =
 
 The plugin originally earned its name from fuzzy logic. Fuzzy logic is a field that is generally associated with artificial intelligence, in which things are not either true or false, but rather somewhat true and false at the same time.
 
