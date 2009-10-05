@@ -53,6 +53,10 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 
 == Change Log ==
 
+= 3.0.1 =
+
+- Fix the fuzzy comments query
+
 = 3.0 =
 
 - Complete rewrite

@@ -3,7 +3,7 @@
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
 Description: WordPress widgets that let you list recent posts, pages, links, or comments.
-Version: 3.0
+Version: 3.0.1 beta
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets
@@ -734,7 +734,7 @@ class fuzzy_widget extends WP_Widget {
 						SELECT	CAST(comment.comment_date AS DATE) as comment_day
 						$items_sql
 						GROUP BY comment_day
-						ORDER BY comment.comment_date
+						ORDER BY comment.comment_date DESC
 						LIMIT $amount
 						) as comment_days
 					)
