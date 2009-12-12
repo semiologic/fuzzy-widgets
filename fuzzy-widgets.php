@@ -3,7 +3,7 @@
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
 Description: WordPress widgets that let you list recent posts, pages, links, or comments.
-Version: 3.0.2
+Version: 3.0.3 alpha
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets
@@ -1003,12 +1003,50 @@ class fuzzy_widget extends WP_Widget {
 	 **/
 
 	function save_post($post_id) {
+		if ( !get_transient('cached_section_ids') )
+			return;
+		
+		$post_id = (int) $post_id;
 		$post = get_post($post_id);
 		
 		if ( $post->post_type != 'page' )
 			return;
 		
-		delete_transient('cached_section_ids');
+		$section_id = get_post_meta($post_id, '_section_id', true);
+		$refresh = false;
+		if ( !$section_id ) {
+			$refresh = true;
+		} else {
+			_get_post_ancestors($post);
+			if ( !$post->ancestors ) {
+				if ( $section_id != $post_id )
+					$refresh = true;
+			} elseif ( $section_id != $post->ancestors[0] ) {
+				$refresh = true;
+			}
+		}
+		
+		if ( $refresh ) {
+			global $wpdb;
+			if ( !$post->post_parent )
+				$new_section_id = $post_id;
+			else
+				$new_section_id = get_post_meta($post->post_parent, '_section_id', true);
+			
+			if ( $new_section_id ) {
+				update_post_meta($post_id, '_section_id', $new_section_id);
+				wp_cache_delete($post_id, 'posts');
+				
+				# mass-process children
+				if ( $wpdb->get_var("SELECT ID FROM $wpdb->posts WHERE post_parent = $post_id AND post_type = 'page' LIMIT 1") )
+					delete_transient('cached_section_ids');
+			} else {
+				# fix corrupt data
+				if ( $section_id )
+					delete_post_meta($post_id, '_section_id');
+				delete_transient('cached_section_ids');
+			}
+		}
 	} # save_post()
 	
 	
@@ -1038,7 +1076,7 @@ class fuzzy_widget extends WP_Widget {
 		
 		foreach ( $pages as $page ) {
 			$parent = $page;
-			while ( $parent->post_parent )
+			while ( $parent->post_parent && $parent->ID != $parent->post_parent )
 				$parent = get_post($parent->post_parent);
 			
 			if ( "$parent->ID" !== get_post_meta($page->ID, '_section_id', true) )
@@ -1102,6 +1140,11 @@ class fuzzy_widget extends WP_Widget {
 	 **/
 	
 	function flush_cache($in = null) {
+		static $done = false;
+		if ( $done )
+			return $in;
+		
+		$done = true;
 		$cache_ids = array();
 		
 		$widgets = get_option("widget_fuzzy_widget");
@@ -1215,7 +1258,7 @@ foreach ( array(
 		
 		'flush_cache',
 		'after_db_upgrade',
-		) as $hook)
+		) as $hook )
 	add_action($hook, array('fuzzy_widget', 'flush_cache'));
 
 register_activation_hook(__FILE__, array('fuzzy_widget', 'activate'));
