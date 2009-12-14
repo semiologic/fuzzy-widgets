@@ -1312,9 +1312,6 @@ foreach ( array(
 		'add_link',
 		'edit_link',
 		'delete_link',
-		'edit_comment',
-		'comment_post',
-		'wp_set_comment_status',
 		
 		'flush_cache',
 		'after_db_upgrade',
@@ -1326,9 +1323,9 @@ add_action('pre_post_update', array('fuzzy_widget', 'pre_flush_post'));
 foreach ( array(
 		'save_post',
 		'delete_post',
+		'wp_update_comment_count',
 		) as $hook )
 	add_action($hook, array('fuzzy_widget', 'flush_post'), 1); // before _save_post_hook()
-
 
 register_activation_hook(__FILE__, array('fuzzy_widget', 'activate'));
 register_deactivation_hook(__FILE__, array('fuzzy_widget', 'flush_cache'));
