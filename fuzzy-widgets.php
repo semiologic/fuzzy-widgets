@@ -1336,5 +1336,5 @@ register_deactivation_hook(__FILE__, array('fuzzy_widget', 'flush_cache'));
 add_action('save_post', array('fuzzy_widget', 'save_post'));
 add_action('add_link', array('fuzzy_widget', 'link_added'));
 
-wp_cache_add_non_persistent_groups(array('widget_queries'));
+wp_cache_add_non_persistent_groups(array('widget_queries', 'pre_flush_post'));
 ?>
