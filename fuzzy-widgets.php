@@ -1133,6 +1133,68 @@ class fuzzy_widget extends WP_Widget {
 	
 	
 	/**
+	 * pre_flush_post()
+	 *
+	 * @param int $post_id
+	 * @return void
+	 **/
+
+	function pre_flush_post($post_id) {
+		$post_id = (int) $post_id;
+		if ( !$post_id )
+			return;
+		
+		$post = get_post($post_id);
+		if ( !$post || wp_is_post_revision($post_id) )
+			return;
+		
+		if ( wp_cache_get($post_id, 'pre_flush_post') === false )
+			$old = array();
+		
+		$update = false;
+		foreach ( array(
+			'post_status',
+			) as $field => $value ) {
+			if ( !isset($o[$field]) ) {
+				$old[$field] = $post->$field;
+				$update = true;
+			}
+		}
+		
+		if ( $update )
+			wp_cache_set($post_id, $old, 'pre_flush_post');
+	} # pre_flush_post()
+	
+	
+	/**
+	 * flush_post()
+	 *
+	 * @param int $post_id
+	 * @return void
+	 **/
+
+	function flush_post($post_id) {
+		$post_id = (int) $post_id;
+		if ( !$post_id )
+			return;
+		
+		# prevent mass-flushing when rewrite rules have not changed
+		remove_action('generate_rewrite_rules', array('fuzzy_widget', 'flush_cache'));
+		
+		$post = get_post($post_id);
+		if ( !$post || wp_is_post_revision($post_id) )
+			return;
+		
+		$old = wp_cache_get($post_id, 'pre_flush_post');
+		
+		if ( $post->post_status != 'publish' && ( !$old || $old['post_status'] != 'publish' ) )
+			return;
+		
+		fuzzy_widget::flush_cache();
+	} # flush_post()
+	
+	
+	/**
 	 * flush_cache()
 	 *
 	 * @param mixed $in
@@ -1237,8 +1299,6 @@ foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook
 	add_action('load-' . $hook, array('fuzzy_widget', 'editor_init'));
 
 foreach ( array(
-		'save_post',
-		'delete_post',
 		'switch_theme',
 		'update_option_active_plugins',
 		'update_option_show_on_front',
@@ -1260,6 +1320,15 @@ foreach ( array(
 		'after_db_upgrade',
 		) as $hook )
 	add_action($hook, array('fuzzy_widget', 'flush_cache'));
+
+add_action('pre_post_update', array('fuzzy_widget', 'pre_flush_post'));
+
+foreach ( array(
+		'save_post',
+		'delete_post',
+		) as $hook )
+	add_action($hook, array('fuzzy_widget', 'flush_post'), 1); // before _save_post_hook()
+
 
 register_activation_hook(__FILE__, array('fuzzy_widget', 'activate'));
 register_deactivation_hook(__FILE__, array('fuzzy_widget', 'flush_cache'));
