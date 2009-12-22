@@ -3,7 +3,7 @@
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
 Description: WordPress widgets that let you list recent posts, pages, links, or comments.
-Version: 3.0.3 RC
+Version: 3.0.3 RC2
 Author: Denis de Bernardy
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets
@@ -1172,16 +1172,21 @@ class fuzzy_widget extends WP_Widget {
 	 * flush_post()
 	 *
 	 * @param int $post_id
+	 * @param mixed $new
+	 * @param mixed $old
 	 * @return void
 	 **/
 
-	function flush_post($post_id) {
+	function flush_post($post_id, $new = null, $old = null) {
 		$post_id = (int) $post_id;
 		if ( !$post_id )
 			return;
 		
 		# prevent mass-flushing when the permalink structure hasn't changed
 		remove_action('generate_rewrite_rules', array('fuzzy_widget', 'flush_cache'));
+		
+		if ( current_filter() == 'wp_update_comment_count' && $new == $old )
+			return;
 		
 		$post = get_post($post_id);
 		if ( !$post || wp_is_post_revision($post_id) )
@@ -1325,9 +1330,10 @@ add_action('pre_post_update', array('fuzzy_widget', 'pre_flush_post'));
 foreach ( array(
 		'save_post',
 		'delete_post',
-		'wp_update_comment_count',
 		) as $hook )
 	add_action($hook, array('fuzzy_widget', 'flush_post'), 1); // before _save_post_hook()
+
+add_action('wp_update_comment_count', array('fuzzy_widget', 'flush_post'), 1, 3);
 
 register_activation_hook(__FILE__, array('fuzzy_widget', 'activate'));
 register_deactivation_hook(__FILE__, array('fuzzy_widget', 'flush_cache'));
