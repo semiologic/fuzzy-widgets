@@ -53,6 +53,10 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 
 == Change Log ==
 
+= 3.0.4 =
+
+- Further cache improvements (fix priority)
+
 = 3.0.3 =
 
 - Cache improvements
