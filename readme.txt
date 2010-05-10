@@ -53,10 +53,6 @@ The [Semiologic forum](http://forum.semiologic.com) is the best place to report 
 
 == Change Log ==
 
-= 3.0.5 =
-
-- WP 3.0 compat
-
 = 3.0.4 =
 
 - Further cache improvements (fix priority)
