@@ -3,8 +3,8 @@
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
 Description: WordPress widgets that let you list recent posts, pages, links, or comments.
-Version: 3.0.5
-Author: Denis de Bernardy
+Version: 3.1
+Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets
 Domain Path: /lang
@@ -32,6 +32,7 @@ if ( !defined('sem_widget_cache_debug') )
 /**
  * fuzzy_widget
  *
+ * @property string alt_option_name
  * @package Fuzzy Widgets
  **/
 
@@ -1017,11 +1018,11 @@ class fuzzy_widget extends WP_Widget {
 		if ( !$section_id ) {
 			$refresh = true;
 		} else {
-			_get_post_ancestors($post);
-			if ( !$post->ancestors ) {
+            $ancestors = get_post_ancestors($post);
+			if ( empty($ancestors) ) {
 				if ( $section_id != $post_id )
 					$refresh = true;
-			} elseif ( $section_id != $post->ancestors[0] ) {
+			} elseif ( $section_id != $ancestors[count($ancestors)-1] ) {
 				$refresh = true;
 			}
 		}
