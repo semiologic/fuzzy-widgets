@@ -3,7 +3,7 @@
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
 Description: WordPress widgets that let you list recent posts, pages, links, or comments.
-Version: 3.1
+Version: 3.1.1
 Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets
@@ -1320,7 +1320,8 @@ foreach ( array(
 		'add_link',
 		'edit_link',
 		'delete_link',
-		
+        'clean_post_cache',
+        'clean_page_cache',
 		'flush_cache',
 		'after_db_upgrade',
 		) as $hook )
