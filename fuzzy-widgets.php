@@ -3,7 +3,7 @@
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
 Description: WordPress widgets that let you list recent posts, pages, links, or comments.
-Version: 3.1.1
+Version: 3.2
 Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets
@@ -37,6 +37,70 @@ if ( !defined('sem_widget_cache_debug') )
  **/
 
 class fuzzy_widget extends WP_Widget {
+    /**
+   	 * fuzzy_widget()
+   	 *
+   	 * @return void
+   	 **/
+
+   	function fuzzy_widget() {
+        add_action('widgets_init', array($this, 'widgets_init'));
+
+        foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
+        	add_action('load-' . $hook, array($this, 'editor_init'));
+
+        foreach ( array(
+        		'switch_theme',
+        		'update_option_active_plugins',
+        		'update_option_show_on_front',
+        		'update_option_page_on_front',
+        		'update_option_page_for_posts',
+        		'update_option_sidebars_widgets',
+        		'update_option_sem5_options',
+        		'update_option_sem6_options',
+        		'generate_rewrite_rules',
+
+        		'add_link',
+        		'edit_link',
+        		'delete_link',
+                'clean_post_cache',
+                'clean_page_cache',
+        		'flush_cache',
+        		'after_db_upgrade',
+        		) as $hook )
+        	add_action($hook, array($this, 'flush_cache'));
+
+        add_action('pre_post_update', array($this, 'pre_flush_post'));
+
+        foreach ( array(
+        		'save_post',
+        		'delete_post',
+        		) as $hook )
+        	add_action($hook, array($this, 'flush_post'), 1); // before _save_post_hook()
+
+        add_action('wp_update_comment_count', array($this, 'flush_post'), 1, 3);
+
+        register_activation_hook(__FILE__, array($this, 'activate'));
+        register_deactivation_hook(__FILE__, array($this, 'flush_cache'));
+
+        add_action('save_post', array($this, 'save_post'));
+        add_action('add_link', array($this, 'link_added'));
+
+        wp_cache_add_non_persistent_groups(array('widget_queries', 'pre_flush_post'));
+
+
+   		$widget_ops = array(
+   			'classname' => 'fuzzy_widget',
+   			'description' => __('Recent Posts, Pages, Links or Comments.', 'fuzzy-widgets'),
+   			);
+   		$control_ops = array(
+   			'width' => 330,
+   			);
+
+   		$this->init();
+   		$this->WP_Widget('fuzzy_widget', __('Fuzzy Widget', 'fuzzy-widgets'), $widget_ops, $control_ops);
+   	} # fuzzy_widget()
+
 	/**
 	 * init()
 	 *
@@ -70,8 +134,8 @@ class fuzzy_widget extends WP_Widget {
 		
 		widget_utils::post_meta_boxes();
 		widget_utils::page_meta_boxes();
-		add_action('post_widget_config_affected', array('fuzzy_widget', 'widget_config_affected'));
-		add_action('page_widget_config_affected', array('fuzzy_widget', 'widget_config_affected'));
+		add_action('post_widget_config_affected', array($this, 'widget_config_affected'));
+		add_action('page_widget_config_affected', array($this, 'widget_config_affected'));
 	} # editor_init()
 	
 	
@@ -97,27 +161,7 @@ class fuzzy_widget extends WP_Widget {
 	function widgets_init() {
 		register_widget('fuzzy_widget');
 	} # widgets_init()
-	
-	
-	/**
-	 * fuzzy_widget()
-	 *
-	 * @return void
-	 **/
 
-	function fuzzy_widget() {
-		$widget_ops = array(
-			'classname' => 'fuzzy_widget',
-			'description' => __('Recent Posts, Pages, Links or Comments.', 'fuzzy-widgets'),
-			);
-		$control_ops = array(
-			'width' => 330,
-			);
-		
-		$this->init();
-		$this->WP_Widget('fuzzy_widget', __('Fuzzy Widget', 'fuzzy-widgets'), $widget_ops, $control_ops);
-	} # fuzzy_widget()
-	
 	
 	/**
 	 * widget()
@@ -247,7 +291,7 @@ class fuzzy_widget extends WP_Widget {
 						else
 							$cur_date = mysql2date(get_option('date_format'), date('H:m:d'));
 						
-						add_action('shutdown', array('fuzzy_widget', 'activate'));
+						add_action('shutdown', array($this, 'activate'));
 					}
 				}
 				break;
@@ -1184,7 +1228,7 @@ class fuzzy_widget extends WP_Widget {
 			return;
 		
 		# prevent mass-flushing when the permalink structure hasn't changed
-		remove_action('generate_rewrite_rules', array('fuzzy_widget', 'flush_cache'));
+		remove_action('generate_rewrite_rules', array($this, 'flush_cache'));
 		
 		if ( current_filter() == 'wp_update_comment_count' && $new == $old )
 			return;
@@ -1301,47 +1345,6 @@ class fuzzy_widget extends WP_Widget {
 	} # upgrade()
 } # fuzzy_widget
 
-add_action('widgets_init', array('fuzzy_widget', 'widgets_init'));
+$fuzzy_widget = new fuzzy_widget();
 
-foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
-	add_action('load-' . $hook, array('fuzzy_widget', 'editor_init'));
-
-foreach ( array(
-		'switch_theme',
-		'update_option_active_plugins',
-		'update_option_show_on_front',
-		'update_option_page_on_front',
-		'update_option_page_for_posts',
-		'update_option_sidebars_widgets',
-		'update_option_sem5_options',
-		'update_option_sem6_options',
-		'generate_rewrite_rules',
-		
-		'add_link',
-		'edit_link',
-		'delete_link',
-        'clean_post_cache',
-        'clean_page_cache',
-		'flush_cache',
-		'after_db_upgrade',
-		) as $hook )
-	add_action($hook, array('fuzzy_widget', 'flush_cache'));
-
-add_action('pre_post_update', array('fuzzy_widget', 'pre_flush_post'));
-
-foreach ( array(
-		'save_post',
-		'delete_post',
-		) as $hook )
-	add_action($hook, array('fuzzy_widget', 'flush_post'), 1); // before _save_post_hook()
-
-add_action('wp_update_comment_count', array('fuzzy_widget', 'flush_post'), 1, 3);
-
-register_activation_hook(__FILE__, array('fuzzy_widget', 'activate'));
-register_deactivation_hook(__FILE__, array('fuzzy_widget', 'flush_cache'));
-
-add_action('save_post', array('fuzzy_widget', 'save_post'));
-add_action('add_link', array('fuzzy_widget', 'link_added'));
-
-wp_cache_add_non_persistent_groups(array('widget_queries', 'pre_flush_post'));
 ?>
