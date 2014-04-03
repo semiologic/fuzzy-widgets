@@ -3,7 +3,7 @@
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
 Description: WordPress widgets that let you list recent posts, pages, links, or comments.
-Version: 3.3.1
+Version: 3.4 dev
 Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets
@@ -18,8 +18,6 @@ Terms of use
 This software is copyright Denis de Bernardy & Mike Koepke, and is distributed under the terms of the MIT and GPLv2 licenses.
 **/
 
-
-load_plugin_textdomain('fuzzy-widgets', false, dirname(plugin_basename(__FILE__)) . '/lang');
 
 if ( !defined('widget_utils_textdomain') )
 	define('widget_utils_textdomain', 'fuzzy-widgets');
@@ -37,56 +35,70 @@ if ( !defined('sem_widget_cache_debug') )
 
 class fuzzy_widget extends WP_Widget {
 	/**
-	 * fuzzy_widget()
+	 * Plugin instance.
 	 *
-	 * @return \fuzzy_widget
+	 * @see get_instance()
+	 * @type object
 	 */
+	protected static $instance = NULL;
 
+	/**
+	 * URL to this plugin's directory.
+	 *
+	 * @type string
+	 */
+	public $plugin_url = '';
+
+	/**
+	 * Path to this plugin's directory.
+	 *
+	 * @type string
+	 */
+	public $plugin_path = '';
+
+	/**
+	 * Access this plugin’s working instance
+	 *
+	 * @wp-hook plugins_loaded
+	 * @return  object of this class
+	 */
+	public static function get_instance()
+	{
+		NULL === self::$instance and self::$instance = new self;
+
+		return self::$instance;
+	}
+
+	/**
+	 * Loads translation file.
+	 *
+	 * Accessible to other classes to load different language files (admin and
+	 * front-end for example).
+	 *
+	 * @wp-hook init
+	 * @param   string $domain
+	 * @return  void
+	 */
+	public function load_language( $domain )
+	{
+		load_plugin_textdomain(
+			$domain,
+			FALSE,
+			$this->plugin_path . 'lang'
+		);
+	}
+
+	/**
+	 * Constructor.
+	 *
+	 *
+	 */
 	public function __construct() {
-        add_action('widgets_init', array($this, 'widgets_init'));
+		$this->plugin_url    = plugins_url( '/', __FILE__ );
+		$this->plugin_path   = plugin_dir_path( __FILE__ );
+		$this->load_language( 'fuzzy-widgets' );
 
-        foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
-        	add_action('load-' . $hook, array($this, 'editor_init'));
-
-        foreach ( array(
-        		'switch_theme',
-        		'update_option_active_plugins',
-        		'update_option_show_on_front',
-        		'update_option_page_on_front',
-        		'update_option_page_for_posts',
-        		'update_option_sidebars_widgets',
-        		'update_option_sem5_options',
-        		'update_option_sem6_options',
-        		'generate_rewrite_rules',
-
-        		'add_link',
-        		'edit_link',
-        		'delete_link',
-                'clean_post_cache',
-                'clean_page_cache',
-        		'flush_cache',
-        		'after_db_upgrade',
-        		) as $hook )
-        	add_action($hook, array($this, 'flush_cache'));
-
-        add_action('pre_post_update', array($this, 'pre_flush_post'));
-
-        foreach ( array(
-        		'save_post',
-        		'delete_post',
-        		) as $hook )
-        	add_action($hook, array($this, 'flush_post'), 1); // before _save_post_hook()
-
-        add_action('wp_update_comment_count', array($this, 'flush_post'), 1, 3);
-
-        register_activation_hook(__FILE__, array($this, 'activate'));
-        register_deactivation_hook(__FILE__, array($this, 'flush_cache'));
-
-        add_action('save_post', array($this, 'save_post'), 15);
-        add_action('add_link', array($this, 'link_added'));
-
-        wp_cache_add_non_persistent_groups(array('widget_queries', 'pre_flush_post'));
-
+		add_action( 'plugins_loaded', array ( $this, 'init' ) );
 
    		$widget_ops = array(
    			'classname' => 'fuzzy_widget',
@@ -96,9 +108,9 @@ class fuzzy_widget extends WP_Widget {
    			'width' => 330,
    			);
 
-   		$this->init();
    		$this->WP_Widget('fuzzy_widget', __('Fuzzy Widget', 'fuzzy-widgets'), $widget_ops, $control_ops);
    	} # fuzzy_widget()
+
 
 	/**
 	 * init()
@@ -118,9 +130,56 @@ class fuzzy_widget extends WP_Widget {
 				}
 			}
 		}
+
+		add_action('widgets_init', array($this, 'widgets_init'));
+
+		foreach ( array(
+		    'switch_theme',
+		    'update_option_active_plugins',
+		    'update_option_show_on_front',
+		    'update_option_page_on_front',
+		    'update_option_page_for_posts',
+		    'update_option_sidebars_widgets',
+		    'update_option_sem5_options',
+		    'update_option_sem6_options',
+		    'generate_rewrite_rules',
+
+		    'add_link',
+		    'edit_link',
+		    'delete_link',
+	        'clean_post_cache',
+	        'clean_page_cache',
+		    'flush_cache',
+		    'after_db_upgrade',
+		    ) as $hook )
+			add_action($hook, array($this, 'flush_cache'));
+
+		add_action('wp_update_comment_count', array($this, 'flush_post'), 1, 3);
+
+		register_activation_hook(__FILE__, array($this, 'activate'));
+		register_deactivation_hook(__FILE__, array($this, 'flush_cache'));
+
+		if ( is_admin() ) {
+			add_action('pre_post_update', array($this, 'pre_flush_post'));
+
+			foreach ( array(
+			    'save_post',
+			    'delete_post',
+			    ) as $hook )
+			add_action($hook, array($this, 'flush_post'), 1); // before _save_post_hook()
+
+			add_action('save_post', array($this, 'save_post'), 15);
+			add_action('add_link', array($this, 'link_added'));
+
+			foreach ( array('post.php', 'post-new.php', 'page.php', 'page-new.php') as $hook )
+				add_action('load-' . $hook, array($this, 'editor_init'));
+		}
+
+
+		wp_cache_add_non_persistent_groups(array('widget_queries', 'pre_flush_post'));
 	} # init()
-	
-	
+
+
 	/**
 	 * editor_init()
 	 *
@@ -129,7 +188,7 @@ class fuzzy_widget extends WP_Widget {
 
 	function editor_init() {
 		if ( !class_exists('widget_utils') )
-			include dirname(__FILE__) . '/widget-utils/widget-utils.php';
+			include $this->plugin_path . '/widget-utils/widget-utils.php';
 		
 		widget_utils::post_meta_boxes();
 		widget_utils::page_meta_boxes();
@@ -1352,4 +1411,4 @@ class fuzzy_widget extends WP_Widget {
 	} # upgrade()
 } # fuzzy_widget
 
-$fuzzy_widget = new fuzzy_widget();
+$fuzzy_widget = fuzzy_widget::get_instance();
