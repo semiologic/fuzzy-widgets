@@ -3,7 +3,7 @@
 Plugin Name: Fuzzy Widgets
 Plugin URI: http://www.semiologic.com/software/fuzzy-widgets/
 Description: WordPress widgets that let you list recent posts, pages, links, or comments.
-Version: 3.4 dev
+Version: 3.4
 Author: Denis de Bernardy & Mike Koepke
 Author URI: http://www.getsemiologic.com
 Text Domain: fuzzy-widgets
@@ -84,7 +84,7 @@ class fuzzy_widget extends WP_Widget {
 		load_plugin_textdomain(
 			$domain,
 			FALSE,
-			$this->plugin_path . 'lang'
+			dirname(plugin_basename(__FILE__)) . '/lang'
 		);
 	}
 
@@ -244,11 +244,20 @@ class fuzzy_widget extends WP_Widget {
 			return;
 		} elseif ( !in_array($type, array('pages', 'posts', 'links', 'comments', 'old_posts', 'updates')) )
 			return;
-		
-		$cache_id = "$widget_id";
-		$o = get_transient($cache_id);
-		
-		if ( !sem_widget_cache_debug && !is_preview() ) {
+
+		$use_caching = true;
+		global $wp_version;
+		if ( version_compare( $wp_version, '3.9', '>=' ) )
+			if ( $this->is_preview() )
+				$use_caching = false;
+
+		$o = '';
+		if ( $use_caching ) {
+			$cache_id = "$widget_id";
+			$o = get_transient($cache_id);
+		}
+
+		if ( !sem_widget_cache_debug && !is_preview() && $use_caching ) {
 			if ( $o !== false ) {
 				if ( $o )
 					echo $o;
@@ -278,7 +287,7 @@ class fuzzy_widget extends WP_Widget {
 		}
 		
 		if ( !$items ) {
-			if ( !is_preview() )
+			if ( !is_preview() && $use_caching )
 				set_transient($cache_id, '');
 			return;
 		}
@@ -417,7 +426,7 @@ class fuzzy_widget extends WP_Widget {
 		
 		$o = ob_get_clean();
 		
-		if ( !is_preview() )
+		if ( !is_preview() && $use_caching )
 			set_transient($cache_id, $o);
 		
 		echo $o;
